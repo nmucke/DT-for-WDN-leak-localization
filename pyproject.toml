@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "DT-for-WDN-leak-localization"
+version = "0.1.0"
+license = {file = "LICENSE.txt"}
+description = "A package for the detection and localization of leaks in water distribution networks using a probabilistic digital twins."
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "matplotlib ~= 3.6.2",
+    "numpy ~= 1.23.5"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/nmucke/DT-for-WDN-leak-localization"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+
+[tool.coverage.run]
+source = ["DT_for_WDN_leak_localization"]
+omit = ["*/__init__.py"]
