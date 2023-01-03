@@ -23,5 +23,5 @@ addopts = [
 ]
 
 [tool.coverage.run]
-source = ["DT_for_WDN_leak_localization"]
+source = ["src/DT_for_WDN_leak_localization"]
 omit = ["*/__init__.py"]

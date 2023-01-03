@@ -1,5 +1,8 @@
 ### General
 
+# Ignore data
+data/
+
 # Exclude large files
 *.mp4
 *.tar
