@@ -3,6 +3,9 @@
 # Ignore data
 data/
 
+# Ignore mlflow
+mlruns/
+
 # Ignore figures
 figures/
 

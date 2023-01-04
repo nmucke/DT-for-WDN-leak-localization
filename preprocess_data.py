@@ -52,21 +52,16 @@ class NetworkDataset(torch.utils.data.Dataset):
         self.file_ids = file_ids
 
         self.dtype = torch.get_default_dtype()
-
-    def __len__(self):
-        return len(self.file_ids)
-
-    def __getitem__(self, idx):
-
-        idx = self.file_ids[idx]
-
-        wdn = WDN(self.data_path_state + str(idx))
-
+    
+    def get_pars_tensor(self, wdn: WDN) -> torch.Tensor:
         pars = torch.zeros((NUM_TIME_STEPS, PARS_DIM), dtype=self.dtype)
         pars[:, 0] = torch.tensor(wdn.leak.pipe_id)
         pars[:, 1] = torch.tensor(wdn.leak.area)
         pars[:, 2] = torch.arange(0, NUM_TIME_STEPS)
 
+        return pars
+    
+    def get_state_tensor(self, wdn: WDN) -> torch.Tensor:
         flow_rate = torch.tensor(
             wdn.edges.flow_rate.values, 
             dtype=self.dtype
@@ -81,7 +76,16 @@ class NetworkDataset(torch.utils.data.Dataset):
 
         state = torch.cat([flow_rate, head], dim=1)
 
-        return state, pars
+        return state
+
+    def __len__(self):
+        return len(self.file_ids)
+
+    def __getitem__(self, idx):
+
+        wdn = WDN(self.data_path_state + str(self.file_ids[idx]))
+
+        return self.get_state_tensor(wdn), self.get_pars_tensor(wdn)
 
 
 def main():
@@ -118,11 +122,9 @@ def main():
 
         processed_data = preprocessor.transform_state(state)
 
-        state_tensor_to_be_saved[i*BATCH_SIZE:i*BATCH_SIZE+iter_batch_size] = \
-            processed_data
+        state_tensor_to_be_saved[i*BATCH_SIZE:i*BATCH_SIZE+iter_batch_size] = processed_data
         
-        pars_tensor_to_be_saved[i*BATCH_SIZE:i*BATCH_SIZE+iter_batch_size] = \
-            pars
+        pars_tensor_to_be_saved[i*BATCH_SIZE:i*BATCH_SIZE+iter_batch_size] = pars
         
     torch.save(state_tensor_to_be_saved, f'{PROCESSED_DATA_SAVE_PATH}/state.pt')
     torch.save(pars_tensor_to_be_saved, f'{PROCESSED_DATA_SAVE_PATH}/pars.pt')

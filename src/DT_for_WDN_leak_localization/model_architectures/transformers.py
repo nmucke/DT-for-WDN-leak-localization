@@ -256,10 +256,10 @@ def normal_init(m, mean, std):
 class Encoder(nn.Module):
     def __init__(
             self,
-            latent_dim=32,
-            state_dim=128,
-            embed_dims=[],
-            hidden_neurons=[],
+            latent_dim: int=32,
+            state_dim: int=128,
+            embed_dims: list=[8, 8],
+            hidden_neurons: list=[32, 16],
     ):
         super().__init__()
 
@@ -311,12 +311,12 @@ class Encoder(nn.Module):
 class CrossAttentionDecoder(nn.Module):
     def __init__(
             self,
-            latent_dim=32,
-            state_dim=128,
-            embed_dims=[],
-            hidden_neurons=[],
-            pars_dim=(119),
-    ):
+            latent_dim: int=32,
+            state_dim: int=128,
+            embed_dims: list=[8, 8],
+            hidden_neurons: list=[32, 16],
+            pars_dims: list=[119, 24],
+    ) -> None:
         super().__init__()
 
         pars_hidden_neurons = [latent_dim//2] + hidden_neurons
@@ -324,14 +324,14 @@ class CrossAttentionDecoder(nn.Module):
 
         self.hidden_neurons = [latent_dim] + hidden_neurons
         self.latent_dim = latent_dim
-        self.pars_dim = pars_dim
+        self.pars_dim = pars_dims
         self.state_dim = state_dim
 
         self.embed_dims = embed_dims
 
-        if len(pars_dim) == 1:
+        if len(pars_dims) == 1:
             pars_embedding_dim = [latent_dim]
-        elif len(pars_dim) == 2:
+        elif len(pars_dims) == 2:
             pars_embedding_dim = [latent_dim, latent_dim]
 
         total_pars_embedding_dim = sum(pars_embedding_dim)
@@ -340,7 +340,7 @@ class CrossAttentionDecoder(nn.Module):
         for i in range(len(self.pars_dim)):
             self.pars_embedding_layers.append(
                 nn.Embedding(
-                    num_embeddings=pars_dim[i],
+                    num_embeddings=pars_dims[i],
                     embedding_dim=pars_embedding_dim[i]
                 )
             )
@@ -351,7 +351,6 @@ class CrossAttentionDecoder(nn.Module):
         )
 
         self.input_layer = nn.Linear(1, self.embed_dims[0])
-
 
         self.positional_embedding = PositionalEmbedding(
             dim=self.embed_dims[0]

@@ -3,25 +3,32 @@ training_params:
   batch_size: 128
   patience: 50
 
-model_architecture: 'transformer'
-
-model_type: 'WAE'
-
-model_args:
+model_params:
+  architecture: 'transformer'
+  type: 'WAE'
   encoder:
-    num_layers: 2
+    latent_dim: 12
+    state_dim: 65
+    hidden_neurons: [32, 16]
+    embed_dims: [8, 8, 8]
   decoder:
-    num_layers: 2
+    latent_dim: 12
+    state_dim: 65
+    hidden_neurons: [32, 16]
+    embed_dims: [8, 8, 8]
+    pars_dims: [34, 24]
 
-optimizer_type: 'Adam'
-
-optimizer_args:
-  encoder:
-    lr: 1e-2
-  decoder:
-    lr: 1e-2
+optimizer_params:
+  type: 'Adam'
+  encoder_args:
+    lr: 2.0e-2
+    weight_decay: 1.0e-10
+  decoder_args:
+    lr: 2.0e-2
+    weight_decay: 1.0e-10
 
 data_params:
   num_pipes: 34
   num_nodes: 31
   num_time_steps: 24
+  include_leak_area: False

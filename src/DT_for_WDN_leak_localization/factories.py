@@ -5,28 +5,40 @@ from DT_for_WDN_leak_localization.model_architectures import (
     dense,
     transformers,
 )
+from DT_for_WDN_leak_localization.models.wasserstein_AE import (
+    SupervisedWassersteinAE,
+    UnsupervisedWassersteinAE,
+)
 
-def create_model(
-    model_type: str, 
-    model_architecture: str,
-    model_args: dict
-    ):
-    
-    model_type_facotry = {
-        'WAE': WAE,
-        'VAE': VAE,
-        'AE': AE,
+def create_model(model_params: dict) -> nn.Module:
+    """Create model based on model_params."""
+
+    # Create encoder
+    encoder = create_encoder(
+        encoder_architecture=model_params['architecture'],
+        encoder_args=model_params['encoder'],
+    )
+
+    # Check if decoder is should be supervised
+    if model_params['type'] in ['WAE']:
+        supervised = True
+    else:
+        supervised = False
+
+    # Create decoder
+    decoder = create_decoder(
+        decoder_architecture=model_params['architecture'],
+        decoder_args=model_params['decoder'],
+        supervised=supervised,
+    )
+
+    # Create model
+    model_factory = {
+        'WAE': SupervisedWassersteinAE,
     }
 
-    model_architecture_factory = {
-        'WAE': create_WAE,
-        'VAE': create_VAE,
-        'AE': create_AE,
-    }
+    return model_factory[model_params['type']](encoder, decoder)
     
-
-    return 2
-
 def create_encoder(
     encoder_architecture: str,
     encoder_args: dict,
@@ -47,7 +59,7 @@ def create_decoder(
 
     if supervised:
         decoder_architecture_factory = {
-            'transformer': transformers.SupervisedDecoder,
+            'transformer': transformers.CrossAttentionDecoder,
             'dense': dense.SupervisedDecoder,
         }
     else:
