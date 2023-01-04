@@ -76,7 +76,7 @@ def main():
         model=model,
         optimizer=optimizers,
         params=params,
-        model_save_path=f"{MODEL_SAVE_PATH}params['model_params']['name']"
+        model_save_path=f"{MODEL_SAVE_PATH}{params['model_params']['name']}"
     )
 
     AE_trainer.fit(

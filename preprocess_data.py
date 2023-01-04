@@ -15,12 +15,12 @@ from DT_for_WDN_leak_localization.network import WDN
 torch.set_default_dtype(torch.float32)
 
 NET = 1
-NUM_SAMPLES = 10
+NUM_SAMPLES = 30000
 BATCH_SIZE = 512
 
 PARS_DIM = 3
 
-DATA_PARAMS_PATH = f"conf/net_{str(NET)}/config.yml"
+DATA_PARAMS_PATH = f"conf/net_{str(NET)}/AE_config.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/train_data/network_"
 
 with open(DATA_PARAMS_PATH) as f:

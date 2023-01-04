@@ -31,7 +31,8 @@ def create_train_stepper(
     """Get trainer"""
 
     trainer_factory = {
-        'WAE': WAE_trainer.WAETrainStepper,
+        'SupervisedWAE': WAE_trainer.SupervisedWAETrainStepper,
+        'UnsupervisedWAE': WAE_trainer.UnsupervisedWAETrainStepper,
     }
 
     return trainer_factory[params['model_params']['type']](
@@ -50,7 +51,7 @@ def create_AE(model_params: dict) -> nn.Module:
     )
 
     # Check if decoder is should be supervised
-    if model_params['type'] in ['WAE']:
+    if model_params['type'] in ['SupervisedWAE']:
         supervised = True
     else:
         supervised = False
@@ -64,7 +65,8 @@ def create_AE(model_params: dict) -> nn.Module:
 
     # Create model
     model_factory = {
-        'WAE': SupervisedWassersteinAE,
+        'SupervisedWAE': SupervisedWassersteinAE,
+        'UnsupervisedWAE': UnsupervisedWassersteinAE,
     }
 
     return model_factory[model_params['type']](encoder, decoder)

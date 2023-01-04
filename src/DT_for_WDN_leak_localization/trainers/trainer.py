@@ -78,7 +78,8 @@ class AETrainer():
         print('Validation losses', end=': ')
         for k in total_loss.keys():
             total_loss[k] = total_loss[k]
-            print(f'{k}: {total_loss[k]/ len(val_dataloader):.4f}', end=', ')
+            print(f'{k}: {total_loss[k]/ len(val_dataloader):.7f}', end=', ')
+        print(f'epoch: {self.epoch}', end=' ')
         print()
 
         return total_loss
@@ -90,6 +91,8 @@ class AETrainer():
     ) -> None:
 
         for epoch in range(self.params['training_params']['num_epochs']):
+            self.epoch = epoch
+
             self.model.train()
             self._train_epoch(train_dataloader)
 

@@ -1,35 +1,34 @@
 training_params:
-  num_epochs: 20
-  batch_size: 2
-  patience: 50
+  num_epochs: 2000
+  batch_size: 64
   kernel_regu: 1.0e-2
   kernel: 'multiscale'
 
 model_params:
   architecture: 'transformer'
-  type: 'WAE'
+  type: 'UnsupervisedWAE'
   encoder:
     latent_dim: 16
     state_dim: 65
     hidden_neurons: [32, 16]
-    embed_dims: [2, 2, 2]
-    num_heads: 2
+    embed_dims: [8, 8, 8]
+    num_heads: 4
   decoder:
-    latent_dim: 12
+    latent_dim: 16
     state_dim: 65
     hidden_neurons: [32, 16]
-    embed_dims: [2, 2, 2]
-    pars_dims: [34, 24]
-    num_heads: 2
-  name: 'WAE'
+    embed_dims: [8, 8, 8]
+    #pars_dims: [34, 24]
+    num_heads: 4
+  name: 'UnsupervisedWAE'
 
 optimizer_params:
   type: 'Adam'
   encoder_args:
-    lr: 2.0e-2
+    lr: 5.0e-4
     weight_decay: 1.0e-10
   decoder_args:
-    lr: 2.0e-2
+    lr: 5.0e-4
     weight_decay: 1.0e-10
 
 scheduler_params:
@@ -43,5 +42,9 @@ data_params:
   num_nodes: 31
   num_time_steps: 24
   include_leak_area: False
+
+early_stopping_params:
+  patience: 30
+
 
 

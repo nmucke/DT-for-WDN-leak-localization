@@ -37,6 +37,7 @@ class MultiHeadAttention(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
         # Embedding dimension of model is a multiple of number of heads
+
         assert d_model % self.num_heads == 0
         self.d_k = d_model // self.num_heads
 
@@ -251,8 +252,6 @@ def normal_init(m, mean, std):
         if m.bias.data is not None:
             m.bias.data.zero_()
 
-
-
 class Encoder(nn.Module):
     def __init__(
         self,
@@ -315,14 +314,14 @@ class CrossAttentionDecoder(nn.Module):
             latent_dim: int=32,
             state_dim: int=128,
             embed_dims: list=[8, 8],
-            hidden_neurons: list=[32, 16],
+            hidden_neurons: list=[16, 32],
             pars_dims: list=[119, 24],
             num_heads: int=2,
     ) -> None:
         super().__init__()
 
-        pars_hidden_neurons = [latent_dim//2] + hidden_neurons
-        pars_embed_dims = [embed_dims[0]//2] + embed_dims
+        pars_hidden_neurons = [latent_dim] + hidden_neurons
+        pars_embed_dims = [embed_dims[0]] + embed_dims
 
         self.hidden_neurons = [latent_dim] + hidden_neurons
         self.latent_dim = latent_dim
@@ -349,7 +348,7 @@ class CrossAttentionDecoder(nn.Module):
 
         self.pars_layer_in = nn.Linear(
                 in_features=total_pars_embedding_dim,
-                out_features=(self.hidden_neurons[0] * self.embed_dims[0])//2
+                out_features=(self.hidden_neurons[0] * self.embed_dims[0])
         )
 
         self.input_layer = nn.Linear(1, self.embed_dims[0])
@@ -397,8 +396,7 @@ class CrossAttentionDecoder(nn.Module):
         pars = torch.cat(pars, 1)
 
         pars = self.pars_layer_in(pars)
-        pars = pars.view(-1, self.hidden_neurons[0]//2, self.embed_dims[0]//2)
-
+        pars = pars.view(-1, self.hidden_neurons[0], self.embed_dims[0])
         x = x.unsqueeze(-1)
         x = self.input_layer(x)
 
@@ -414,3 +412,64 @@ class CrossAttentionDecoder(nn.Module):
 
         return x
 
+
+
+class Decoder(nn.Module):
+    def __init__(
+            self,
+            latent_dim: int=32,
+            state_dim: int=128,
+            embed_dims: list=[8, 8],
+            hidden_neurons: list=[16, 32],
+            num_heads: int=2,
+    ) -> None:
+        super().__init__()
+
+        self.hidden_neurons = [latent_dim] + hidden_neurons
+        self.latent_dim = latent_dim
+        self.state_dim = state_dim
+
+        self.embed_dims = embed_dims
+
+
+        self.input_layer = nn.Linear(1, self.embed_dims[0])
+
+        self.positional_embedding = PositionalEmbedding(
+            dim=self.embed_dims[0]
+        )
+
+        self.decoder_layers = nn.ModuleList([
+            DecoderLayer(
+                input_dim=self.hidden_neurons[i],
+                output_dim=self.hidden_neurons[i+1],
+                input_embed_dim=self.embed_dims[i],
+                output_embed_dim=self.embed_dims[i+1],
+                num_heads=num_heads,
+                embed_hidden_dim=embed_dims[i],
+            ) for i in range(len(self.hidden_neurons)-1)
+        ])
+
+
+        self.flatten = nn.Flatten()
+
+        self.output_layer_1 = nn.Linear(
+                self.embed_dims[-1]*self.hidden_neurons[-1],
+                self.state_dim
+        )
+
+
+    def forward(self, x, ):
+
+        x = x.unsqueeze(-1)
+        x = self.input_layer(x)
+
+        x = self.positional_embedding(x)
+
+        for layer in self.decoder_layers:
+
+            x = layer(x, x)
+
+        x = self.flatten(x)
+        x = self.output_layer_1(x)
+
+        return x

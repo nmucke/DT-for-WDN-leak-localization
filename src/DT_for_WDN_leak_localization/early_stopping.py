@@ -5,7 +5,7 @@ class EarlyStopper:
         self.patience = patience
         self.min_delta = min_delta
         self.counter = 0
-        self.min_validation_loss = torch.inf
+        self.min_validation_loss = 1e12
 
     def early_stop(self, validation_loss):
         is_best_model = False
