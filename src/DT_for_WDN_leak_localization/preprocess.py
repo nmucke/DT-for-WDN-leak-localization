@@ -19,8 +19,11 @@ class Preprocessor():
         self.max_head = -1e8*torch.ones(num_nodes)
 
     def partial_fit(self, state):
-        flow_rate = state[:, 0:self.num_pipes]
-        head = state[:, self.num_pipes:self.num_pipes+self.num_nodes]
+        flow_rate = state[:, :, 0:self.num_pipes]
+        head = state[:, :, self.num_pipes:self.num_pipes+self.num_nodes]
+
+        flow_rate = flow_rate.view(-1, self.num_pipes)
+        head = head.view(-1, self.num_nodes)
 
         '''
         if torch.any(flow_rate < self.min_flow_rate):
@@ -32,8 +35,8 @@ class Preprocessor():
             self.min_head = torch.min(head)
         if torch.any(head > self.max_head):
             self.max_head = torch.max(head)
-
         '''
+
         if torch.any(torch.any(flow_rate < self.min_flow_rate, dim=0)).item():
             ids = torch.where(torch.any(flow_rate < self.min_flow_rate, dim=0))[0]
             self.min_flow_rate[ids] = torch.min(flow_rate[:, ids], dim=0)[0]
@@ -59,17 +62,22 @@ class Preprocessor():
             torch.where(torch.abs(self.max_head - self.min_head) > 1e-12)[0]
 
     def transform_state(self, state):
-        if len(state.shape) < 2:
-            state = state.unsqueeze(0)
+        """Transform the state to be between 0 and 1."""
+        
+        batch_size = state.shape[0]
+        num_time_steps = state.shape[1]
 
-        flow_rate = state[:, 0:self.num_pipes]
-        head = state[:, self.num_pipes:self.num_pipes+self.num_nodes]
+        flow_rate = state[:, :, 0:self.num_pipes]
+        head = state[:, :, self.num_pipes:self.num_pipes+self.num_nodes]
+
+        flow_rate = flow_rate.view(-1, self.num_pipes)
+        head = head.view(-1, self.num_nodes)
 
         '''
         flow_rate = (flow_rate - self.min_flow_rate) / (self.max_flow_rate - self.min_flow_rate)
         head = (head - self.min_head) / (self.max_head - self.min_head)
-
         '''
+        
         flow_rate[:, self.flow_rate_min_equal_max_ids] = 0.5
         head[:, self.head_min_equal_max_ids] = 0.5
 
@@ -80,16 +88,26 @@ class Preprocessor():
             (head[:, self.head_transform_ids] - self.min_head[self.head_transform_ids]) \
             / (self.max_head[self.head_transform_ids] - self.min_head[self.head_transform_ids])
 
-        state = torch.cat((flow_rate, head), dim=1).squeeze(0)
+        state = torch.cat((flow_rate, head), dim=1)
+        state = state.view(batch_size, num_time_steps, -1)
         return state
 
-    def inverse_transform_states(self, states):
-        flow_rate = states[:, 0:self.num_pipes]
-        head = states[:, self.num_pipes:self.num_pipes+self.num_nodes]
+    def inverse_transform_state(self, state):
+        """Inverse transform the state"""
+
+        batch_size = state.shape[0]
+        num_time_steps = state.shape[1]
+
+        flow_rate = state[:, :, 0:self.num_pipes]
+        head = state[:, :, self.num_pipes:self.num_pipes+self.num_nodes]
+
+        flow_rate = flow_rate.view(-1, self.num_pipes)
+        head = head.view(-1, self.num_nodes)
 
         flow_rate = flow_rate * (self.max_flow_rate - self.min_flow_rate) + self.min_flow_rate
         head = head * (self.max_head - self.min_head) + self.min_head
 
-        state = torch.cat((flow_rate, head), dim=1).squeeze(0)
+        state = torch.cat((flow_rate, head), dim=1)
+        state = state.view(batch_size, num_time_steps, -1)
         return state
 

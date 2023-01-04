@@ -5,18 +5,41 @@ import pdb
 import torch
 import networkx as nx
 from torch.utils.data import DataLoader
+import pickle
+import matplotlib.pyplot as plt
+import os
 
 from DT_for_WDN_leak_localization.preprocess import Preprocessor
+from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
 NET = 1
-DATA_PATH = f"data/raw_data/net_{str(NET)}/training_data/network_"
+NUM_SAMPLES = 10
+BATCH_SIZE = 512
+
+PARS_DIM = 3
+
 DATA_PARAMS_PATH = f"conf/net_{str(NET)}/config.yml"
+DATA_PATH = f"data/raw_data/net_{str(NET)}/train_data/network_"
 
 with open(DATA_PARAMS_PATH) as f:
     params = yaml.load(f, Loader=SafeLoader)
 params = params['data_params']
+STATE_DIM = params['num_pipes'] + params['num_nodes']
+NUM_TIME_STEPS = params['num_time_steps']
+
+
+TRAINED_PREPROCESSOR_SAVE_PATH = \
+    f'trained_preprocessors/'
+if not os.path.exists(TRAINED_PREPROCESSOR_SAVE_PATH):
+    os.makedirs(TRAINED_PREPROCESSOR_SAVE_PATH)
+TRAINED_PREPROCESSOR_SAVE_PATH += f"net_{str(NET)}_preprocessor.pkl"
+
+PROCESSED_DATA_SAVE_PATH = \
+    f'data/processed_data/net_{str(NET)}/train_data'
+if not os.path.exists(PROCESSED_DATA_SAVE_PATH):
+    os.makedirs(PROCESSED_DATA_SAVE_PATH)
 
 class NetworkDataset(torch.utils.data.Dataset):
     def __init__(
@@ -31,41 +54,46 @@ class NetworkDataset(torch.utils.data.Dataset):
         self.dtype = torch.get_default_dtype()
 
     def __len__(self):
-        return len(self.state)
+        return len(self.file_ids)
 
     def __getitem__(self, idx):
 
         idx = self.file_ids[idx]
 
-        data_dict = nx.read_gpickle(self.data_path_state + str(idx))
+        wdn = WDN(self.data_path_state + str(idx))
+
+        pars = torch.zeros((NUM_TIME_STEPS, PARS_DIM), dtype=self.dtype)
+        pars[:, 0] = torch.tensor(wdn.leak.pipe_id)
+        pars[:, 1] = torch.tensor(wdn.leak.area)
+        pars[:, 2] = torch.arange(0, NUM_TIME_STEPS)
 
         flow_rate = torch.tensor(
-            data_dict['flow_rate'].values, 
+            wdn.edges.flow_rate.values, 
             dtype=self.dtype
             )
         head = torch.tensor(
-            data_dict['head'].values, 
+            wdn.nodes.head.values, 
             dtype=self.dtype
             )
 
-        flow_rate = flow_rate[0:24]
-        head = head[0:24]
+        flow_rate = flow_rate[0:NUM_TIME_STEPS]
+        head = head[0:NUM_TIME_STEPS]
 
-        data = torch.cat([flow_rate, head], dim=1)
+        state = torch.cat([flow_rate, head], dim=1)
 
-        return data
+        return state, pars
 
 
 def main():
 
     dataset = NetworkDataset(
         data_path=DATA_PATH,
-        file_ids=range(30000),
+        file_ids=range(NUM_SAMPLES),
     )
 
     dataloader = DataLoader(
         dataset,
-        batch_size=512,
+        batch_size=BATCH_SIZE,
         shuffle=False,
         num_workers=0,
     )
@@ -75,10 +103,32 @@ def main():
         num_nodes=params['num_nodes'],
     )
     
-    for i, data in enumerate(dataloader):
-        preprocessor.partial_fit(data)
+    for i, (state, _) in enumerate(dataloader):
+        preprocessor.partial_fit(state)
 
-    print("DONE")
+    print("Done Training Preprocessor")
+
+    with open(TRAINED_PREPROCESSOR_SAVE_PATH, "wb") as f:
+        pickle.dump(preprocessor, f)
+    
+    state_tensor_to_be_saved = torch.zeros((NUM_SAMPLES, NUM_TIME_STEPS, STATE_DIM))
+    pars_tensor_to_be_saved = torch.zeros((NUM_SAMPLES, NUM_TIME_STEPS, PARS_DIM))
+    for i, (state, pars) in enumerate(dataloader):
+        iter_batch_size = state.shape[0]
+
+        processed_data = preprocessor.transform_state(state)
+
+        state_tensor_to_be_saved[i*BATCH_SIZE:i*BATCH_SIZE+iter_batch_size] = \
+            processed_data
+        
+        pars_tensor_to_be_saved[i*BATCH_SIZE:i*BATCH_SIZE+iter_batch_size] = \
+            pars
+        
+    torch.save(state_tensor_to_be_saved, f'{PROCESSED_DATA_SAVE_PATH}/state.pt')
+    torch.save(pars_tensor_to_be_saved, f'{PROCESSED_DATA_SAVE_PATH}/pars.pt')
+
+    print("Done Saving Processed Data")
+
 
 if __name__ == "__main__":
     main()

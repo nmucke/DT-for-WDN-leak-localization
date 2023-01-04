@@ -1,6 +1,7 @@
 training_params:
   epoch_count: 20
   batch_size: 128
+  patience: 50
 
 model_architecture: 'transformer'
 
@@ -23,3 +24,4 @@ optimizer_args:
 data_params:
   num_pipes: 34
   num_nodes: 31
+  num_time_steps: 24

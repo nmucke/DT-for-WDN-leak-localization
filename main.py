@@ -9,7 +9,6 @@ torch.set_default_dtype(torch.float32)
 NET = 1
 PARAMS_PATH = f"conf/net_{str(NET)}/config.yml"
 
-
 with open(PARAMS_PATH) as f:
     params = yaml.load(f, Loader=SafeLoader)
 

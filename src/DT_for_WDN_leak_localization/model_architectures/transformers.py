@@ -308,7 +308,7 @@ class Encoder(nn.Module):
         return x
 
 
-class SupervisedDecoder(nn.Module):
+class CrossAttentionDecoder(nn.Module):
     def __init__(
             self,
             latent_dim=32,

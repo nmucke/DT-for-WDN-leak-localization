@@ -14,7 +14,7 @@ NET = 1
 WITH_LEAK = True
 TRAIN_OR_TEST = 'train'
 
-NUM_SAMPLES = 1000
+NUM_SAMPLES = 10
 
 LOWER_LEAK_AREA = 0.001
 UPPER_LEAK_AREA = 0.005
@@ -28,7 +28,8 @@ save_data_path = \
     f"data/raw_data/net_{str(NET)}/{TRAIN_OR_TEST}_data/"
 if not os.path.exists(save_data_path):
     os.makedirs(save_data_path)
-    
+save_data_path += "network_"
+
 epanet_data_path = f"EPANET_input_files/net_{str(NET)}.inp"
 
 def main():

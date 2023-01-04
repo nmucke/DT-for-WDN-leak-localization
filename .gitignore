@@ -3,6 +3,9 @@
 # Ignore data
 data/
 
+# Ignore figures
+figures/
+
 # Exclude large files
 *.mp4
 *.tar
