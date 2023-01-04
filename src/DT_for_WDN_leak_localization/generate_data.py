@@ -152,5 +152,5 @@ def simulate_WDN(
     nx.write_gpickle(result_dict, f'{data_save_path}{id}')
     
     print(id)
-    return result_dict
+    #return result_dict
 

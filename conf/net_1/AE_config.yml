@@ -1,0 +1,47 @@
+training_params:
+  num_epochs: 20
+  batch_size: 2
+  patience: 50
+  kernel_regu: 1.0e-2
+  kernel: 'multiscale'
+
+model_params:
+  architecture: 'transformer'
+  type: 'WAE'
+  encoder:
+    latent_dim: 16
+    state_dim: 65
+    hidden_neurons: [32, 16]
+    embed_dims: [2, 2, 2]
+    num_heads: 2
+  decoder:
+    latent_dim: 12
+    state_dim: 65
+    hidden_neurons: [32, 16]
+    embed_dims: [2, 2, 2]
+    pars_dims: [34, 24]
+    num_heads: 2
+  name: 'WAE'
+
+optimizer_params:
+  type: 'Adam'
+  encoder_args:
+    lr: 2.0e-2
+    weight_decay: 1.0e-10
+  decoder_args:
+    lr: 2.0e-2
+    weight_decay: 1.0e-10
+
+scheduler_params:
+  type: CosineWarmupScheduler
+  args:
+    warmup: 50 
+    max_iters: 500
+
+data_params:
+  num_pipes: 34
+  num_nodes: 31
+  num_time_steps: 24
+  include_leak_area: False
+
+

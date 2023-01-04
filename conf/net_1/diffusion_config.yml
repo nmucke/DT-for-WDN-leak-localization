@@ -1,7 +1,9 @@
 training_params:
-  epoch_count: 20
-  batch_size: 128
+  num_epochs: 20
+  batch_size: 2
   patience: 50
+  kernel_regu: 1.0e-2
+  kernel: 'multiscale'
 
 model_params:
   architecture: 'transformer'
@@ -26,6 +28,16 @@ optimizer_params:
   decoder_args:
     lr: 2.0e-2
     weight_decay: 1.0e-10
+
+scheduler_params:
+  type: CosineWarmupScheduler
+  args:
+    warmup: 50 
+    max_iters: 500
+
+diffusion_params:
+  load_AE: False
+  AE_path: '...'
 
 data_params:
   num_pipes: 34

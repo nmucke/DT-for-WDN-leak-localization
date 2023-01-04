@@ -1,6 +1,7 @@
 import pdb
 import torch
 from torch import nn
+from torch import optim
 from DT_for_WDN_leak_localization.model_architectures import (
     dense,
     transformers,
@@ -9,8 +10,37 @@ from DT_for_WDN_leak_localization.models.wasserstein_AE import (
     SupervisedWassersteinAE,
     UnsupervisedWassersteinAE,
 )
+from DT_for_WDN_leak_localization.optimizers import Optimizers
 
-def create_model(model_params: dict) -> nn.Module:
+from DT_for_WDN_leak_localization.trainers import (
+    WAE_trainer
+)
+
+def create_diffusion_model(
+    model_params: dict,
+    AE: nn.Module,
+):
+
+    return 2
+
+def create_train_stepper(
+    model: nn.Module,
+    optimizer: Optimizers,
+    params: dict,
+):
+    """Get trainer"""
+
+    trainer_factory = {
+        'WAE': WAE_trainer.WAETrainStepper,
+    }
+
+    return trainer_factory[params['model_params']['type']](
+        model=model,
+        optimizer=optimizer,
+        params=params,
+        )
+
+def create_AE(model_params: dict) -> nn.Module:
     """Create model based on model_params."""
 
     # Create encoder
@@ -69,3 +99,4 @@ def create_decoder(
         }
 
     return decoder_architecture_factory[decoder_architecture](**decoder_args)
+

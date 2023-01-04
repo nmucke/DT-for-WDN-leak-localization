@@ -8,16 +8,16 @@ import os
 
 from DT_for_WDN_leak_localization.generate_data import simulate_WDN
 
-NUM_CPUS = 10
+NUM_CPUS = 3
 
 NET = 1
 WITH_LEAK = True
 TRAIN_OR_TEST = 'train'
 
-NUM_SAMPLES = 10
+NUM_SAMPLES = 30000
 
-LOWER_LEAK_AREA = 0.001
-UPPER_LEAK_AREA = 0.005
+LOWER_LEAK_AREA = 0.002
+UPPER_LEAK_AREA = 0.004
 
 if NET == 1:
     total_inflow_based_demand = True
@@ -44,8 +44,6 @@ def main():
     link_list = \
         [link for link in link_list if link not in pump_list + valve_list]
     
-    ray.shutdown()
-    ray.init(num_cpus=NUM_CPUS)
     sample_ids = range(0, NUM_SAMPLES)
     if WITH_LEAK:
         if TRAIN_OR_TEST == 'train':
@@ -64,8 +62,11 @@ def main():
             leak_pipes_id = np.concatenate((leak_pipes_id, extra_samples))
 
         leak_pipes = [link_list[i] for i in leak_pipes_id]
-        leak_areas = np.random.uniform(low=0.001, high=0.005, size=NUM_SAMPLES)
-        
+        leak_areas = np.random.uniform(
+            low=LOWER_LEAK_AREA,
+            high=UPPER_LEAK_AREA,
+            size=NUM_SAMPLES
+            )
         for id, leak_pipe, leak_area in zip(sample_ids, leak_pipes, leak_areas):
             result_dict_leak = simulate_WDN(
             #result_dict_leak = simulate_WDN.remote(
@@ -85,6 +86,8 @@ def main():
                 inp_file=epanet_data_path,
                 )
 
-    ray.shutdown()
 if __name__ == "__main__":
+    ray.shutdown()
+    ray.init(num_cpus=NUM_CPUS)
     main()
+    ray.shutdown()

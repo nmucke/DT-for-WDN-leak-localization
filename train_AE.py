@@ -3,25 +3,31 @@ import yaml
 from yaml.loader import SafeLoader
 import pdb
 import mlflow
+import os
 
-from DT_for_WDN_leak_localization.factories import create_model
+from DT_for_WDN_leak_localization.factories import create_AE
 from DT_for_WDN_leak_localization.optimizers import Optimizers
 from DT_for_WDN_leak_localization.dataset import create_dataloader
+from DT_for_WDN_leak_localization.trainers.trainer import AETrainer
 
 torch.set_default_dtype(torch.float32)
 
 WITH_MLFLOW = False
 
 NET = 1
-PARAMS_PATH = f"conf/net_{str(NET)}/config.yml"
+PARAMS_PATH = f"conf/net_{str(NET)}/AE_config.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
-NUM_SAMPLES = 10
-NUM_TRAIN_SAMPLES = 8
-NUM_VAL_SAMPLES = 2
+NUM_SAMPLES = 30000
+NUM_TRAIN_SAMPLES = 25000
+NUM_VAL_SAMPLES = 5000
 
 NUM_WORKERS = 4
 CUDA = True
+
+MODEL_SAVE_PATH = f"trained_models/net_{str(NET)}/"
+if not os.path.exists(MODEL_SAVE_PATH):
+    os.makedirs(MODEL_SAVE_PATH)
 
 if CUDA:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,14 +64,24 @@ def main():
         include_leak_area=params['data_params']['include_leak_area'],
     )
 
-    state, pars = next(iter(train_dataloader))
-
-    model = create_model(model_params=params['model_params'])
+    model = create_AE(model_params=params['model_params'])
     model.to(device)
 
     optimizers = Optimizers(
         model=model,
-        optimizer_params=params['optimizer_params'],
+        params=params,
+    )
+    
+    AE_trainer = AETrainer(
+        model=model,
+        optimizer=optimizers,
+        params=params,
+        model_save_path=f"{MODEL_SAVE_PATH}params['model_params']['name']"
+    )
+
+    AE_trainer.fit(
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
     )
 
     if WITH_MLFLOW:

@@ -255,11 +255,12 @@ def normal_init(m, mean, std):
 
 class Encoder(nn.Module):
     def __init__(
-            self,
-            latent_dim: int=32,
-            state_dim: int=128,
-            embed_dims: list=[8, 8],
-            hidden_neurons: list=[32, 16],
+        self,
+        latent_dim: int=32,
+        state_dim: int=128,
+        embed_dims: list=[8, 8],
+        hidden_neurons: list=[32, 16],
+        num_heads: int=2,
     ):
         super().__init__()
 
@@ -281,7 +282,7 @@ class Encoder(nn.Module):
                 output_dim=self.hidden_neurons[i+1],
                 input_embed_dim=self.embed_dims[i],
                 output_embed_dim=self.embed_dims[i+1],
-                num_heads=4,
+                num_heads=num_heads,
                 embed_hidden_dim=embed_dims[i],
             ) for i in range(len(self.hidden_neurons)-1)
         ])
@@ -316,6 +317,7 @@ class CrossAttentionDecoder(nn.Module):
             embed_dims: list=[8, 8],
             hidden_neurons: list=[32, 16],
             pars_dims: list=[119, 24],
+            num_heads: int=2,
     ) -> None:
         super().__init__()
 
@@ -362,7 +364,7 @@ class CrossAttentionDecoder(nn.Module):
                 output_dim=pars_hidden_neurons[i+1],
                 input_embed_dim=pars_embed_dims[i],
                 output_embed_dim=pars_embed_dims[i+1],
-                num_heads=4,
+                num_heads=num_heads,
                 embed_hidden_dim=pars_embed_dims[i],
             ) for i in range(len(pars_hidden_neurons)-1)
         ])
@@ -373,7 +375,7 @@ class CrossAttentionDecoder(nn.Module):
                 output_dim=self.hidden_neurons[i+1],
                 input_embed_dim=self.embed_dims[i],
                 output_embed_dim=self.embed_dims[i+1],
-                num_heads=4,
+                num_heads=num_heads,
                 embed_hidden_dim=embed_dims[i],
             ) for i in range(len(self.hidden_neurons)-1)
         ])
