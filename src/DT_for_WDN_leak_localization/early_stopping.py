@@ -21,4 +21,6 @@ class EarlyStopper:
             self.counter += 1
             if self.counter >= self.patience:
                 return True, is_best_model
+            else:
+                return False, is_best_model
     

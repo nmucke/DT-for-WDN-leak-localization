@@ -91,7 +91,7 @@ def create_decoder(
 
     if supervised:
         decoder_architecture_factory = {
-            'transformer': transformers.CrossAttentionDecoder,
+            'transformer': transformers.SupervisedDecoder,
             'dense': dense.SupervisedDecoder,
         }
     else:

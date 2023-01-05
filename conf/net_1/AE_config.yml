@@ -6,21 +6,21 @@ training_params:
 
 model_params:
   architecture: 'transformer'
-  type: 'UnsupervisedWAE'
+  type: 'SupervisedWAE'
   encoder:
-    latent_dim: 16
-    state_dim: 65
-    hidden_neurons: [32, 16]
-    embed_dims: [8, 8, 8]
-    num_heads: 4
+      latent_dim: 16
+      state_dim: 65
+      embed_dim: 2
+      num_heads: 1
+      hidden_neurons: [32, 16]
   decoder:
-    latent_dim: 16
-    state_dim: 65
-    hidden_neurons: [32, 16]
-    embed_dims: [8, 8, 8]
-    #pars_dims: [34, 24]
-    num_heads: 4
-  name: 'UnsupervisedWAE'
+      latent_dim: 16
+      state_dim: 65
+      embed_dim: 2
+      num_heads: 1
+      hidden_neurons: [16, 32]
+      pars_dims: [34, 24]
+  name: 'SupervisedWAE'
 
 optimizer_params:
   type: 'Adam'

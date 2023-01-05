@@ -11,11 +11,11 @@ import torch.nn.functional as F
 
 
 class PositionalEmbedding(nn.Module):
-    def __init__(self, dim, max_len=1000):
+    def __init__(self, embed_dim, max_len=1000):
         super().__init__()
-        pe = torch.zeros(max_len, dim)
+        pe = torch.zeros(max_len, embed_dim)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, dim, 2).float() * (-math.log(10000.0) / dim))
+        div_term = torch.exp(torch.arange(0, embed_dim, 2).float() * (-math.log(10000.0) / embed_dim))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
@@ -89,92 +89,47 @@ class MultiHeadAttention(nn.Module):
         return H, A
 
 
-class EmbedCNN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dim):
-        super().__init__()
-        self.k1convL1 = nn.Linear(input_dim, hidden_dim)
-        self.k1convL2 = nn.Linear(hidden_dim, output_dim)
-        self.activation = nn.GELU()
-
-    def forward(self, x):
-        x = self.k1convL1(x)
-        x = self.activation(x)
-        x = self.k1convL2(x)
-        return x
-
-class CNN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dim):
-        super().__init__()
-        self.k1convL1 = nn.Conv1d(
-            input_dim,
-            hidden_dim,
-            kernel_size=1
-        )
-        self.k1convL2 = nn.Conv1d(
-            hidden_dim,
-            output_dim,
-            kernel_size=1
-        )
-        self.activation = nn.GELU()
-
-    def forward(self, x):
-        x = self.k1convL1(x)
-        x = self.activation(x)
-        x = self.k1convL2(x)
-        return x
-
 class EncoderLayer(nn.Module):
     def __init__(
             self,
             input_dim,
-            output_dim,
-            input_embed_dim,
-            output_embed_dim,
+            embed_dim,
             num_heads,
-            embed_hidden_dim,
             p=0.1
     ):
         super().__init__()
 
         self.activation = nn.GELU()
 
-        self.mha = MultiHeadAttention(input_embed_dim, num_heads, p)
-        self.embed_cnn = EmbedCNN(
-            input_dim=input_embed_dim,
-            output_dim=output_embed_dim,
-            hidden_dim=embed_hidden_dim
+        self.mha = MultiHeadAttention(embed_dim, num_heads, p)
+
+        self.dropout = nn.Dropout(p)
+
+        # Two-layer MLP
+        self.linear_net = nn.Sequential(
+            nn.Linear(embed_dim, embed_dim),
+            nn.Dropout(p),
+            nn.ReLU(inplace=True),
+            nn.Linear(embed_dim, embed_dim)
         )
 
-        self.cnn = CNN(
-            input_dim=input_dim,
-            output_dim=output_dim,
-            hidden_dim=output_dim
-        )
-
-        self.layernorm1 = nn.LayerNorm(normalized_shape=input_embed_dim, eps=1e-6)
-        self.layernorm2 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
-        self.layernorm3 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
+        self.layernorm1 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
+        self.layernorm2 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
 
     def forward(self, x):
         # Multi-head attention
-        attn_output, _ = self.mha(X_q=x, X_k=x, X_v=x)  # (batch_size, input_seq_len, input_embed_dim)
+        attn_output, _ = self.mha(X_q=x, X_k=x, X_v=x)  # (batch_size, seq_len, embed_dim)
 
-        # Layer norm after adding the residual connection
-        x = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, input_embed_dim)
+        # Adding residual connection
+        x = x + self.dropout(attn_output)
 
-        # Compute accross embedding dimension
-        x = self.embed_cnn(x)  # (batch_size, input_seq_len, output_embed_dim)
+        # Layer norm
+        x = self.layernorm1(x)
 
-        x = self.activation(x)
-
+        # MLP part
+        linear_out = self.linear_net(x)
+        x = x + self.dropout(linear_out)
         x = self.layernorm2(x)
-
-        # Compute accross sequence dimension
-        x = self.cnn(x)  # (batch_size, output_seq_len, output_embed_dim)
-
-        x = self.activation(x)
-
-        x = self.layernorm3(x)
 
         return x
 
@@ -183,62 +138,54 @@ class DecoderLayer(nn.Module):
     def __init__(
             self,
             input_dim,
-            output_dim,
-            input_embed_dim,
-            output_embed_dim,
+            embed_dim,
             num_heads,
-            embed_hidden_dim,
             p=0.1
     ):
         super().__init__()
 
         self.activation = nn.GELU()
 
-        self.mha = MultiHeadAttention(input_embed_dim, num_heads, p)
-        self.embed_cnn = EmbedCNN(
-            input_dim=input_embed_dim,
-            output_dim=output_embed_dim,
-            hidden_dim=embed_hidden_dim
+        self.mha = MultiHeadAttention(embed_dim, num_heads, p)
+
+        self.dropout = nn.Dropout(p)
+
+        # Two-layer MLP
+        self.linear_net = nn.Sequential(
+            nn.Linear(embed_dim, embed_dim),
+            nn.Dropout(p),
+            nn.ReLU(inplace=True),
+            nn.Linear(embed_dim, embed_dim)
         )
 
-        self.cnn = CNN(
-            input_dim=input_dim,
-            output_dim=output_dim,
-            hidden_dim=output_dim
-        )
-
-        self.layernorm1 = nn.LayerNorm(normalized_shape=input_embed_dim, eps=1e-6)
-        self.layernorm2 = nn.LayerNorm(normalized_shape=input_embed_dim, eps=1e-6)
-        self.layernorm3 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
-        self.layernorm4 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
+        self.layernorm1 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
+        self.layernorm2 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
+        self.layernorm3 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
 
     def forward(self, x, encoder_output):
 
         # Multi-head self attention
         attn_output, _ = self.mha(X_q=x, X_k=x, X_v=x)  # (batch_size, input_seq_len, input_embed_dim)
 
-        # Layer norm after adding the residual connection
-        x = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, input_embed_dim)
+        # Adding residual connection
+        x = x + self.dropout(attn_output)
+
+        # Layer norm
+        x = self.layernorm1(x)  # (batch_size, input_seq_len, input_embed_dim)
 
         # Multi-head cross attention
         attn_output, _ = self.mha(X_q=x, X_k=encoder_output, X_v=encoder_output)  # (batch_size, input_seq_len, input_embed_dim)
 
-        # Layer norm after adding the residual connection
-        x = self.layernorm2(x + attn_output)  # (batch_size, input_seq_len, input_embed_dim)
+        # Adding residual connection
+        x = x + self.dropout(attn_output)
 
-        # Compute accross embedding dimension
-        x = self.embed_cnn(x)  # (batch_size, input_seq_len, output_embed_dim)
+        # Layer norm
+        x = self.layernorm2(x)  # (batch_size, input_seq_len, input_embed_dim)
 
-        x = self.activation(x)
-
+        # MLP part
+        linear_out = self.linear_net(x)
+        x = x + self.dropout(linear_out)
         x = self.layernorm3(x)
-
-        # Compute accross sequence dimension
-        x = self.cnn(x)  # (batch_size, output_seq_len, output_embed_dim)
-
-        x = self.activation(x)
-
-        x = self.layernorm4(x)
 
         return x
 
@@ -252,88 +199,287 @@ def normal_init(m, mean, std):
         if m.bias.data is not None:
             m.bias.data.zero_()
 
+class EncoderBlock(nn.Module):
+
+    def __init__(
+        self,
+        input_dim: int=128,  
+        output_dim: int=128,
+        embed_dim: int=8,
+        num_heads: int=2,
+    ):
+        super(EncoderBlock, self).__init__()
+
+
+        self.embed_increasing_layer = nn.Linear(
+            in_features=1,
+            out_features=embed_dim
+        )
+        self.attention_layer = EncoderLayer(
+                input_dim=input_dim,
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+            )
+        self.embed_reduction_layer = nn.Linear(
+            in_features=embed_dim,
+            out_features=1
+        )
+        self.dim_reduction_layer = nn.Linear(
+            in_features=input_dim,
+            out_features=output_dim
+        )
+
+    def forward(self, x):
+        x = x.unsqueeze(-1)
+        x = self.embed_increasing_layer(x)
+        x = self.attention_layer(x)
+        x = self.embed_reduction_layer(x)
+        x = x.squeeze(-1)
+        x = self.dim_reduction_layer(x)
+        return x
+
+class DecoderBlock(nn.Module):
+
+    def __init__(
+        self,
+        input_dim: int=128,  
+        output_dim: int=128,
+        embed_dim: int=8,
+        num_heads: int=2,
+    ):
+        super(DecoderBlock, self).__init__()
+
+
+        self.embed_increasing_layer1 = nn.Linear(
+            in_features=1,
+            out_features=embed_dim
+        )
+        self.attention_layer1 = EncoderLayer(
+                input_dim=input_dim,
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+            )
+        self.embed_reduction_layer1 = nn.Linear(
+            in_features=embed_dim,
+            out_features=1
+        )
+        self.dim_increasing_layer1 = nn.Linear(
+            in_features=input_dim,
+            out_features=output_dim
+        )
+
+    def forward(self, x):
+        x = x.unsqueeze(-1)
+        x = self.embed_increasing_layer1(x)
+        x = self.attention_layer1(x)
+        x = self.embed_reduction_layer1(x)
+        x = x.squeeze(-1)
+        x = self.dim_increasing_layer1(x)
+        return x
+
+class CrossAttentionDecoderBlock(nn.Module):
+
+    def __init__(
+        self,
+        input_dim: int=128,  
+        output_dim: int=128,
+        embed_dim: int=8,
+        num_heads: int=2,
+    ):
+        super(CrossAttentionDecoderBlock, self).__init__()
+
+
+        self.pars_attention_layer1 = EncoderLayer(
+            input_dim=input_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+
+        self.embed_increasing_layer1 = nn.Linear(
+            in_features=1,
+            out_features=embed_dim
+        )
+
+        self.cross_attention_layer1 = DecoderLayer(
+                input_dim=input_dim,
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+            )
+        self.embed_reduction_layer1 = nn.Linear(
+            in_features=embed_dim,
+            out_features=1
+        )
+        self.dim_increasing_layer1 = nn.Linear(
+            in_features=input_dim,
+            out_features=output_dim
+        )
+
+    def forward(self, x, pars):
+        x = x.unsqueeze(-1)
+
+        pars_attn = self.pars_attention_layer1(pars)
+
+        x = self.embed_increasing_layer1(x)
+        x = self.cross_attention_layer1(x, pars_attn)
+        x = self.embed_reduction_layer1(x)
+        x = x.squeeze(-1)
+        x = self.dim_increasing_layer1(x)
+
+        return x, pars_attn
+
 class Encoder(nn.Module):
     def __init__(
         self,
         latent_dim: int=32,
         state_dim: int=128,
-        embed_dims: list=[8, 8],
+        embed_dim: int=8,
         hidden_neurons: list=[32, 16],
         num_heads: int=2,
     ):
         super().__init__()
 
-        self.hidden_neurons = [state_dim] + hidden_neurons
+        self.hidden_neurons = hidden_neurons
         self.latent_dim = latent_dim
         self.state_dim = state_dim
-        self.embed_dims = embed_dims
+        self.embed_dim = embed_dim
+        self.activation = nn.LeakyReLU()
 
-
-        self.input_layer = nn.Linear(1, self.embed_dims[0])
-
-        self.positional_embedding = PositionalEmbedding(
-            dim= self.embed_dims[0]
+        self.input_increase_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.input_attention = EncoderLayer(
+            input_dim=state_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.input_decrease_embedding = nn.Linear(
+            in_features=embed_dim,
+            out_features=1,
+            bias=True
         )
 
-        self.encoder_layers = nn.ModuleList([
-            EncoderLayer(
-                input_dim=self.hidden_neurons[i],
-                output_dim=self.hidden_neurons[i+1],
-                input_embed_dim=self.embed_dims[i],
-                output_embed_dim=self.embed_dims[i+1],
+        self.dim_reduction_layers = nn.Sequential(
+            nn.Linear(
+                in_features=state_dim,
+                out_features=hidden_neurons[0],
+                bias=True
+            ),
+            nn.LeakyReLU(),
+            nn.Linear(
+                in_features=hidden_neurons[0],
+                out_features=hidden_neurons[1],
+                bias=True
+            ),
+            nn.LeakyReLU(),
+            nn.Linear(
+                in_features=hidden_neurons[1],
+                out_features=latent_dim,
+                bias=True
+            ),
+            nn.LeakyReLU(),
+        )
+
+
+        self.output_increase_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.output_attention = EncoderLayer(
+            input_dim=latent_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.output_decrease_embedding = nn.Linear(
+            in_features=embed_dim,
+            out_features=1,
+            bias=False
+        )
+
+        self.input_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+        self.output_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+        '''
+        
+        self.encoder_blocks = nn.Sequential(
+            EncoderBlock(
+                input_dim=state_dim,
+                output_dim=hidden_neurons[0],
+                embed_dim=embed_dim,
                 num_heads=num_heads,
-                embed_hidden_dim=embed_dims[i],
-            ) for i in range(len(self.hidden_neurons)-1)
-        ])
-
-        self.output_layer_1 = nn.Linear(
-                self.embed_dims[-1]*self.hidden_neurons[-1],
-                self.latent_dim
+            ),
+            EncoderBlock(
+                input_dim=hidden_neurons[0],
+                output_dim=hidden_neurons[1],
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+            ),
+            EncoderBlock(
+                input_dim=hidden_neurons[1],
+                output_dim=latent_dim,
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+            )
         )
+        '''
 
-        self.flatten = nn.Flatten()
     def forward(self, x):
+        #x = self.encoder_blocks(x)
+
 
         x = x.unsqueeze(-1)
-        x = self.input_layer(x)
+        x = self.input_increase_embedding(x)
+        x = self.activation(x)
+        x = self.input_pos_encoding(x)
+        x = self.input_attention(x)
+        x = self.input_decrease_embedding(x)
+        x = self.activation(x)
+        x = x.squeeze(-1)
+        
+        x = self.dim_reduction_layers(x)
 
-        x = self.positional_embedding(x)
+        x = x.unsqueeze(-1)
+        x = self.output_increase_embedding(x)
+        x = self.activation(x)
+        x = self.output_pos_encoding(x)
+        x = self.output_attention(x)
+        x = self.output_decrease_embedding(x)
+        x = self.activation(x)
+        x = x.squeeze(-1)
 
-        for layer in self.encoder_layers:
-            x = layer(x)
-
-        x = self.flatten(x)
-
-        x = self.output_layer_1(x)
         return x
 
 
-class CrossAttentionDecoder(nn.Module):
+class SupervisedDecoder(nn.Module):
     def __init__(
             self,
             latent_dim: int=32,
             state_dim: int=128,
-            embed_dims: list=[8, 8],
+            embed_dim: int=8,
             hidden_neurons: list=[16, 32],
             pars_dims: list=[119, 24],
             num_heads: int=2,
     ) -> None:
         super().__init__()
 
-        pars_hidden_neurons = [latent_dim] + hidden_neurons
-        pars_embed_dims = [embed_dims[0]] + embed_dims
-
         self.hidden_neurons = [latent_dim] + hidden_neurons
         self.latent_dim = latent_dim
         self.pars_dim = pars_dims
         self.state_dim = state_dim
-
-        self.embed_dims = embed_dims
+        self.embed_dim = embed_dim
+        self.activation = nn.LeakyReLU()
 
         if len(pars_dims) == 1:
             pars_embedding_dim = [latent_dim]
         elif len(pars_dims) == 2:
-            pars_embedding_dim = [latent_dim, latent_dim]
+            pars_embedding_dim = [latent_dim//2, latent_dim//2]
 
         total_pars_embedding_dim = sum(pars_embedding_dim)
 
@@ -345,70 +491,212 @@ class CrossAttentionDecoder(nn.Module):
                     embedding_dim=pars_embedding_dim[i]
                 )
             )
-
-        self.pars_layer_in = nn.Linear(
-                in_features=total_pars_embedding_dim,
-                out_features=(self.hidden_neurons[0] * self.embed_dims[0])
+        
+        self.pars_input_increase_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.pars_input_attention = EncoderLayer(
+            input_dim=total_pars_embedding_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.pars_input_decrease_embedding = nn.Linear(
+            in_features=embed_dim,
+            out_features=1,
+            bias=True
+        )
+        
+        self.input_increase_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.input_attention = DecoderLayer(
+            input_dim=latent_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.input_decrease_embedding = nn.Linear(
+            in_features=embed_dim,
+            out_features=1,
+            bias=True
         )
 
-        self.input_layer = nn.Linear(1, self.embed_dims[0])
-
-        self.positional_embedding = PositionalEmbedding(
-            dim=self.embed_dims[0]
+        self.dim_reduction_layers = nn.Sequential(
+            nn.Linear(
+                in_features=latent_dim,
+                out_features=hidden_neurons[0],
+                bias=True
+            ),
+            nn.LeakyReLU(),
+            nn.Linear(
+                in_features=hidden_neurons[0],
+                out_features=hidden_neurons[1],
+                bias=True
+            ),
+            nn.LeakyReLU(),
+            nn.Linear(
+                in_features=hidden_neurons[1],
+                out_features=state_dim,
+                bias=True
+            ),
+            nn.LeakyReLU(),
         )
 
-        self.pars_encoder_layers = nn.ModuleList([
-            EncoderLayer(
-                input_dim=pars_hidden_neurons[i],
-                output_dim=pars_hidden_neurons[i+1],
-                input_embed_dim=pars_embed_dims[i],
-                output_embed_dim=pars_embed_dims[i+1],
-                num_heads=num_heads,
-                embed_hidden_dim=pars_embed_dims[i],
-            ) for i in range(len(pars_hidden_neurons)-1)
-        ])
-
-        self.decoder_layers = nn.ModuleList([
-            DecoderLayer(
-                input_dim=self.hidden_neurons[i],
-                output_dim=self.hidden_neurons[i+1],
-                input_embed_dim=self.embed_dims[i],
-                output_embed_dim=self.embed_dims[i+1],
-                num_heads=num_heads,
-                embed_hidden_dim=embed_dims[i],
-            ) for i in range(len(self.hidden_neurons)-1)
-        ])
-
-
-        self.flatten = nn.Flatten()
-
-        self.output_layer_1 = nn.Linear(
-                self.embed_dims[-1]*self.hidden_neurons[-1],
-                self.state_dim
+        self.pars_dim_reduction_layer = nn.Linear(
+            in_features=total_pars_embedding_dim,
+            out_features=state_dim,
+            bias=True
         )
 
+        self.pars_output_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.pars_output_attention = EncoderLayer(
+            input_dim=latent_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+
+        self.output_increase_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.output_attention = DecoderLayer(
+            input_dim=state_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.output_decrease_embedding = nn.Linear(
+            in_features=embed_dim,
+            out_features=1,
+            bias=False
+        )
+
+
+        self.pars_input_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+        self.pars_output_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+
+
+        self.input_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+        self.output_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+        
+        '''
+        self.pars_dim_increase_layer_1 = nn.Conv1d(
+            in_channels=total_pars_embedding_dim,
+            out_channels=latent_dim,
+            kernel_size=1
+        )
+        self.pars_embed_increasing_layer = nn.Linear(
+            in_features=1,
+            out_features=embed_dim
+        )
+
+        self.pars_dim_increase_layer_2 = nn.Conv1d(
+            in_channels=latent_dim,
+            out_channels=hidden_neurons[0],
+            kernel_size=1
+        )
+
+        self.pars_dim_increase_layer_3 = nn.Conv1d(
+            in_channels=hidden_neurons[0],
+            out_channels=hidden_neurons[1],
+            kernel_size=1
+        )
+            
+        self.decoder_block1 = CrossAttentionDecoderBlock(
+            input_dim=latent_dim,
+            output_dim=hidden_neurons[0],
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.decoder_block2 = CrossAttentionDecoderBlock(
+            input_dim=hidden_neurons[0],
+            output_dim=hidden_neurons[1],
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.decoder_block3 = CrossAttentionDecoderBlock(
+            input_dim=hidden_neurons[1],
+            output_dim=state_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        '''
 
     def forward(self, x, pars):
 
+        pars = torch.cat(
+            [self.pars_embedding_layers[i](pars[:, i]) for i in range(len(self.pars_dim))],
+            dim=1
+        )
+        pars = pars.unsqueeze(-1)
+        pars = self.pars_input_increase_embedding(pars)
+        pars = self.activation(pars)
+        pars = self.pars_input_pos_encoding(pars)
+        pars = self.pars_input_attention(pars)
 
-        pars = [emb_layer(pars[:, i])
-            for i, emb_layer in enumerate(self.pars_embedding_layers)]
-        pars = torch.cat(pars, 1)
-
-        pars = self.pars_layer_in(pars)
-        pars = pars.view(-1, self.hidden_neurons[0], self.embed_dims[0])
         x = x.unsqueeze(-1)
-        x = self.input_layer(x)
+        x = self.input_increase_embedding(x)
+        x = self.activation(x)
+        x = self.input_pos_encoding(x)
+        x = self.input_attention(x, pars)
+        x = self.input_decrease_embedding(x)
+        x = self.activation(x)
+        x = x.squeeze(-1)
 
-        x = self.positional_embedding(x)
+        pars = self.pars_input_decrease_embedding(pars)
+        pars = pars.squeeze(-1)
 
-        for layer, pars_layer in zip(self.decoder_layers, self.pars_encoder_layers):
-            pars = pars_layer(pars)
+        x = self.dim_reduction_layers(x)
+        pars = self.pars_dim_reduction_layer(pars)
+        pars = self.activation(pars)
 
-            x = layer(x, pars)
+        pars = pars.unsqueeze(-1)
+        pars = self.pars_output_embedding(pars)
+        pars = self.activation(pars)
+        pars = self.pars_output_pos_encoding(pars)
+        pars = self.pars_output_attention(pars)
 
-        x = self.flatten(x)
-        x = self.output_layer_1(x)
+        x = x.unsqueeze(-1)
+        x = self.output_increase_embedding(x)
+        x = self.activation(x)
+        x = self.output_pos_encoding(x)
+        x = self.output_attention(x, pars)
+        x = self.output_decrease_embedding(x)
+        x = self.activation(x)
+        x = x.squeeze(-1)
+
+        '''
+        pars = pars.unsqueeze(-1)
+        pars = self.pars_embed_increasing_layer(pars)
+        pars = self.pars_dim_increase_layer_1(pars)
+
+        x, pars = self.decoder_block1(x, pars)
+
+        pars = self.pars_dim_increase_layer_2(pars)
+        x, pars = self.decoder_block2(x, pars)
+
+        pars = self.pars_dim_increase_layer_3(pars)
+        x, _ = self.decoder_block3(x, pars)
+        '''
 
         return x
 
@@ -419,57 +707,126 @@ class Decoder(nn.Module):
             self,
             latent_dim: int=32,
             state_dim: int=128,
-            embed_dims: list=[8, 8],
-            hidden_neurons: list=[16, 32],
+            embed_dim: int=8,
             num_heads: int=2,
+            hidden_neurons: list=[16, 32],
     ) -> None:
         super().__init__()
 
-        self.hidden_neurons = [latent_dim] + hidden_neurons
+
+        self.hidden_neurons = hidden_neurons
         self.latent_dim = latent_dim
         self.state_dim = state_dim
+        self.embed_dim = embed_dim
+        self.activation = nn.LeakyReLU()
 
-        self.embed_dims = embed_dims
-
-
-        self.input_layer = nn.Linear(1, self.embed_dims[0])
-
-        self.positional_embedding = PositionalEmbedding(
-            dim=self.embed_dims[0]
+        self.input_increase_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.input_attention = EncoderLayer(
+            input_dim=latent_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.input_decrease_embedding = nn.Linear(
+            in_features=embed_dim,
+            out_features=1,
+            bias=True
         )
 
-        self.decoder_layers = nn.ModuleList([
-            DecoderLayer(
-                input_dim=self.hidden_neurons[i],
-                output_dim=self.hidden_neurons[i+1],
-                input_embed_dim=self.embed_dims[i],
-                output_embed_dim=self.embed_dims[i+1],
+        self.dim_reduction_layers = nn.Sequential(
+            nn.Linear(
+                in_features=latent_dim,
+                out_features=hidden_neurons[0],
+                bias=True
+            ),
+            nn.LeakyReLU(),
+            nn.Linear(
+                in_features=hidden_neurons[0],
+                out_features=hidden_neurons[1],
+                bias=True
+            ),
+            nn.LeakyReLU(),
+            nn.Linear(
+                in_features=hidden_neurons[1],
+                out_features=state_dim,
+                bias=True
+            ),
+            nn.LeakyReLU(),
+        )
+
+
+        self.output_increase_embedding = nn.Linear(
+            in_features=1,
+            out_features=embed_dim,
+            bias=True
+        )
+        self.output_attention = EncoderLayer(
+            input_dim=state_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+        )
+        self.output_decrease_embedding = nn.Linear(
+            in_features=embed_dim,
+            out_features=1,
+            bias=False
+        )
+
+
+        self.input_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+        self.output_pos_encoding = PositionalEmbedding(
+            embed_dim=embed_dim,
+            max_len=1000
+        )
+        
+        '''
+        self.decoder_blocks = nn.Sequential(
+            DecoderBlock(
+                input_dim=latent_dim,
+                output_dim=hidden_neurons[0],
+                embed_dim=embed_dim,
                 num_heads=num_heads,
-                embed_hidden_dim=embed_dims[i],
-            ) for i in range(len(self.hidden_neurons)-1)
-        ])
-
-
-        self.flatten = nn.Flatten()
-
-        self.output_layer_1 = nn.Linear(
-                self.embed_dims[-1]*self.hidden_neurons[-1],
-                self.state_dim
+            ),
+            DecoderBlock(
+                input_dim=hidden_neurons[0],
+                output_dim=hidden_neurons[1],
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+            ),
+            DecoderBlock(
+                input_dim=hidden_neurons[1],
+                output_dim=state_dim,
+                embed_dim=embed_dim,
+                num_heads=num_heads,
+            )
         )
+        '''
 
-
-    def forward(self, x, ):
+    def forward(self, x):
+        x = x.unsqueeze(-1)
+        x = self.input_increase_embedding(x)
+        x = self.activation(x)
+        x = self.input_pos_encoding(x)
+        x = self.input_attention(x)
+        x = self.input_decrease_embedding(x)
+        x = self.activation(x)
+        x = x.squeeze(-1)
+        
+        x = self.dim_reduction_layers(x)
 
         x = x.unsqueeze(-1)
-        x = self.input_layer(x)
+        x = self.output_increase_embedding(x)
+        x = self.activation(x)
+        x = self.output_pos_encoding(x)
+        x = self.output_attention(x)
+        x = self.output_decrease_embedding(x)
+        x = x.squeeze(-1)
 
-        x = self.positional_embedding(x)
-
-        for layer in self.decoder_layers:
-
-            x = layer(x, x)
-
-        x = self.flatten(x)
-        x = self.output_layer_1(x)
+        #x = self.decoder_blocks(x)
 
         return x
