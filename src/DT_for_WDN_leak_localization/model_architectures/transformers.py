@@ -378,9 +378,8 @@ class Encoder(nn.Module):
                 out_features=latent_dim,
                 bias=True
             ),
-            nn.LeakyReLU(),
+            #nn.LeakyReLU(),
         )
-
 
         self.output_increase_embedding = nn.Linear(
             in_features=1,
@@ -433,11 +432,10 @@ class Encoder(nn.Module):
     def forward(self, x):
         #x = self.encoder_blocks(x)
 
-
         x = x.unsqueeze(-1)
         x = self.input_increase_embedding(x)
         x = self.activation(x)
-        x = self.input_pos_encoding(x)
+        #x = self.input_pos_encoding(x)
         x = self.input_attention(x)
         x = self.input_decrease_embedding(x)
         x = self.activation(x)
@@ -448,12 +446,11 @@ class Encoder(nn.Module):
         x = x.unsqueeze(-1)
         x = self.output_increase_embedding(x)
         x = self.activation(x)
-        x = self.output_pos_encoding(x)
+        #x = self.output_pos_encoding(x)
         x = self.output_attention(x)
         x = self.output_decrease_embedding(x)
         x = self.activation(x)
         x = x.squeeze(-1)
-
         return x
 
 
@@ -542,7 +539,7 @@ class SupervisedDecoder(nn.Module):
                 out_features=state_dim,
                 bias=True
             ),
-            nn.LeakyReLU(),
+            #nn.LeakyReLU(),
         )
 
         self.pars_dim_reduction_layer = nn.Linear(
@@ -757,7 +754,6 @@ class Decoder(nn.Module):
             nn.LeakyReLU(),
         )
 
-
         self.output_increase_embedding = nn.Linear(
             in_features=1,
             out_features=embed_dim,
@@ -811,18 +807,18 @@ class Decoder(nn.Module):
         x = x.unsqueeze(-1)
         x = self.input_increase_embedding(x)
         x = self.activation(x)
-        x = self.input_pos_encoding(x)
+        #x = self.input_pos_encoding(x)
         x = self.input_attention(x)
         x = self.input_decrease_embedding(x)
         x = self.activation(x)
         x = x.squeeze(-1)
         
         x = self.dim_reduction_layers(x)
-
+        
         x = x.unsqueeze(-1)
         x = self.output_increase_embedding(x)
         x = self.activation(x)
-        x = self.output_pos_encoding(x)
+        #x = self.output_pos_encoding(x)
         x = self.output_attention(x)
         x = self.output_decrease_embedding(x)
         x = x.squeeze(-1)

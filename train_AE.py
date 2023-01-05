@@ -14,8 +14,16 @@ torch.set_default_dtype(torch.float32)
 
 WITH_MLFLOW = False
 
+SUPERVISED = False
+
+if SUPERVISED:
+    prefix = "Sup"
+else:
+    prefix = "Unsup"
+
+
 NET = 1
-PARAMS_PATH = f"conf/net_{str(NET)}/AE_config.yml"
+PARAMS_PATH = f"conf/net_{str(NET)}/{prefix}AE_config.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
 NUM_SAMPLES = 30000
@@ -24,6 +32,7 @@ NUM_VAL_SAMPLES = 5000
 
 NUM_WORKERS = 4
 CUDA = True
+
 
 MODEL_SAVE_PATH = f"trained_models/net_{str(NET)}/"
 if not os.path.exists(MODEL_SAVE_PATH):

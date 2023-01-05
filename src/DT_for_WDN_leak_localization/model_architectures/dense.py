@@ -50,7 +50,7 @@ class Encoder(nn.Module):
         self.dense_in = nn.Linear(
                 in_features=state_dim,
                 out_features=self.hidden_neurons[0],
-                bias=False
+                bias=True
         )
         self.batch_norm_in = nn.BatchNorm1d(self.hidden_neurons[0])
 
@@ -58,7 +58,7 @@ class Encoder(nn.Module):
                 [nn.Linear(
                     in_features=hidden_neurons[i],
                     out_features=hidden_neurons[i + 1],
-                    bias=False
+                    bias=True
                 ) for i in range(len(hidden_neurons)-1)]
         )
 
@@ -67,10 +67,10 @@ class Encoder(nn.Module):
                                    bias=False
                                    )
 
-        self.batch_norm_layers = nn.ModuleList(
-                [nn.BatchNorm1d(self.hidden_neurons[i])
-                 for i in range(1, len(self.hidden_neurons))]
-        )
+        #self.batch_norm_layers = nn.ModuleList(
+        #        [nn.BatchNorm1d(self.hidden_neurons[i])
+        #         for i in range(1, len(self.hidden_neurons))]
+        #)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
 
@@ -78,16 +78,17 @@ class Encoder(nn.Module):
         x = self.activation(x)
         #x = self.batch_norm_in(x)
 
-        for dense_layer, batch_norm in zip(
-                self.dense_layers,
-                self.batch_norm_layers,
-        ):
+        #for dense_layer, batch_norm in zip(
+        #        self.dense_layers,
+        #        self.batch_norm_layers,
+        #):
+        for dense_layer in self.dense_layers:
             '''
             for dense_layer in self.dense_layers:
             '''
             x = dense_layer(x)
             x = self.activation(x)
-            x = batch_norm(x)
+        #    x = batch_norm(x)
 
 
         x = self.dense_out(x)
@@ -100,7 +101,6 @@ class SupervisedDecoder(nn.Module):
             state_dim: int = 128,
             hidden_neurons: list = [16, 32, 64],
             pars_dim: tuple = (119),
-            pars_embedding_dim: int = 32,
             activation: str = 'leaky_relu'
     ) -> None:
         super().__init__()
@@ -113,9 +113,9 @@ class SupervisedDecoder(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
         if len(pars_dim) == 1:
-            pars_embedding_dim = [pars_embedding_dim]
+            pars_embedding_dim = [latent_dim]
         elif len(pars_dim) == 2:
-            pars_embedding_dim = [pars_embedding_dim, pars_embedding_dim//2]
+            pars_embedding_dim = [latent_dim, latent_dim//2]
 
         total_pars_embedding_dim = sum(pars_embedding_dim)
 
@@ -197,7 +197,7 @@ class Decoder(nn.Module):
         self.dense_in = nn.Linear(
             in_features=latent_dim,
             out_features=self.hidden_neurons[0],
-            bias=False
+            bias=True
         )
 
         self.batch_norm_in = nn.BatchNorm1d(self.hidden_neurons[0])
@@ -206,7 +206,7 @@ class Decoder(nn.Module):
                 [nn.Linear(
                     in_features=self.hidden_neurons[i],
                     out_features=self.hidden_neurons[i + 1],
-                    bias=False
+                    bias=True
                 ) for i in range(len(hidden_neurons)-1)]
         )
 
@@ -216,23 +216,25 @@ class Decoder(nn.Module):
             bias=False
         )
 
-        self.batch_norm_layers = nn.ModuleList(
-                [nn.BatchNorm1d(self.hidden_neurons[i])
-                 for i in range(1, len(self.hidden_neurons))]
-        )
+        #self.batch_norm_layers = nn.ModuleList(
+        #        [nn.BatchNorm1d(self.hidden_neurons[i])
+        #         for i in range(1, len(self.hidden_neurons))]
+        #)
 
-    def forward(self, x: torch.Tensor, pars: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
 
         x = self.dense_in(x)
         x = self.activation(x)
-        x = self.batch_norm_in(x)
+        #x = self.batch_norm_in(x)
 
-        for dense_layer, batch_norm in zip(
-                self.batch_norm_layers,
-        ):
+        #for dense_layer, batch_norm in zip(
+        #    self.dense_layers,
+        #    self.batch_norm_layers,
+        #):
+        for dense_layer in self.dense_layers:
             x = dense_layer(x)
             x = self.activation(x)
-            x = batch_norm(x)
+            #x = batch_norm(x)
 
         x = self.dense_out(x)
 

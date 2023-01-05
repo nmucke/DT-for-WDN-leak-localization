@@ -14,13 +14,11 @@ class EarlyStopper:
             self.min_validation_loss = validation_loss
             self.counter = 0
             is_best_model = True
-
-            return False, is_best_model
-
         elif validation_loss > (self.min_validation_loss + self.min_delta):
             self.counter += 1
             if self.counter >= self.patience:
                 return True, is_best_model
-            else:
-                return False, is_best_model
+
+        return False, is_best_model
+
     

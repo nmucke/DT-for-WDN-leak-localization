@@ -5,21 +5,29 @@ training_params:
   kernel: 'multiscale'
 
 model_params:
-  architecture: 'transformer'
+  architecture: 'dense'
   type: 'SupervisedWAE'
   encoder:
-      latent_dim: 16
-      state_dim: 65
-      embed_dim: 2
-      num_heads: 1
-      hidden_neurons: [32, 16]
+    latent_dim: 16
+    state_dim: 65
+    hidden_neurons: [64, 32, 16]
   decoder:
-      latent_dim: 16
-      state_dim: 65
-      embed_dim: 2
-      num_heads: 1
-      hidden_neurons: [16, 32]
-      pars_dims: [34, 24]
+    latent_dim: 16
+    state_dim: 65
+    hidden_neurons: [16, 32, 64]
+  #encoder:
+  #    latent_dim: 16
+  #    state_dim: 65
+  #    embed_dim: 2
+  #    num_heads: 1
+  #    hidden_neurons: [32, 16]
+  #decoder:
+  #    latent_dim: 16
+  #    state_dim: 65
+  #    embed_dim: 2
+  #    num_heads: 1
+  #    hidden_neurons: [16, 32]
+  #    pars_dims: [34, 24]
   name: 'SupervisedWAE'
 
 optimizer_params:

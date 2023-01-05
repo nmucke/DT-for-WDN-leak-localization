@@ -1,0 +1,58 @@
+training_params:
+  num_epochs: 2000
+  batch_size: 512
+  kernel_regu: 1.0e-2
+  kernel: 'multiscale'
+
+model_params:
+  architecture: 'dense'
+  type: 'UnsupervisedWAE'
+  encoder:
+    latent_dim: 12
+    state_dim: 65
+    hidden_neurons: [48, 32]
+  decoder:
+    latent_dim: 12
+    state_dim: 65
+    hidden_neurons: [32, 48]
+  #encoder:
+  #    latent_dim: 16
+  #    state_dim: 65
+  #    embed_dim: 2
+  #    num_heads: 1
+  #    hidden_neurons: [32, 16]
+  #decoder:
+  #    latent_dim: 16
+  #    state_dim: 65
+  #    embed_dim: 2
+  #    num_heads: 1
+  #    hidden_neurons: [16, 32]
+  #    pars_dims: [34, 24]
+  name: 'UnsupervisedWAE'
+
+optimizer_params:
+  type: 'Adam'
+  encoder_args:
+    lr: 1.0e-3
+    weight_decay: 1.0e-10
+  decoder_args:
+    lr: 1.0e-3
+    weight_decay: 1.0e-10
+
+scheduler_params:
+  type: CosineWarmupScheduler
+  args:
+    warmup: 5 
+    max_iters: 500
+
+data_params:
+  num_pipes: 34
+  num_nodes: 31
+  num_time_steps: 24
+  include_leak_area: False
+
+early_stopping_params:
+  patience: 30
+
+
+
