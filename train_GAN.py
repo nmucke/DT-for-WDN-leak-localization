@@ -6,26 +6,24 @@ import mlflow
 import os
 
 from DT_for_WDN_leak_localization.dataset import get_dataloader
-from DT_for_WDN_leak_localization.trainers.AE_trainer import train_AE
+from DT_for_WDN_leak_localization.trainers.GAN_trainer import train_GAN
 
-from DT_for_WDN_leak_localization.models.decoder import Decoder
-from DT_for_WDN_leak_localization.models.encoder import Encoder
-from DT_for_WDN_leak_localization.models.wasserstein_AE import SupervisedWassersteinAE
-from DT_for_WDN_leak_localization.optimizers import AEOptimizers
+from DT_for_WDN_leak_localization.models.generator import Generator
+from DT_for_WDN_leak_localization.models.critic import Critic
+from DT_for_WDN_leak_localization.models.GAN import GAN
+from DT_for_WDN_leak_localization.optimizers import GANOptimizers
 
-from DT_for_WDN_leak_localization.trainers.WAE_train_stepper import SupervisedWAETrainStepper
+from DT_for_WDN_leak_localization.trainers.GAN_train_stepper import GANTrainStepper
 
 torch.set_default_dtype(torch.float32)
 
-WITH_MLFLOW = False
-
 NET = 1
-CONFIG_PATH = f"conf/net_{str(NET)}/Supervised_WAE.yml"
+CONFIG_PATH = f"conf/net_{str(NET)}/GAN.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
-NUM_SAMPLES = 1500
-NUM_TRAIN_SAMPLES = 1000
-NUM_VAL_SAMPLES = 500
+NUM_SAMPLES = 30000
+NUM_TRAIN_SAMPLES = 25000
+NUM_VAL_SAMPLES = 5000
 
 NUM_WORKERS = 4
 CUDA = True
@@ -34,7 +32,7 @@ MODEL_SAVE_PATH = f"trained_models/net_{str(NET)}/"
 if not os.path.exists(MODEL_SAVE_PATH):
     os.makedirs(MODEL_SAVE_PATH)
 
-model_save_name = f"Supervised_WAE_net_{str(NET)}.pt"
+model_save_name = f"GAN_net_{str(NET)}.pt"
 MODEL_SAVE_PATH = os.path.join(MODEL_SAVE_PATH, model_save_name)
 
 if CUDA:
@@ -46,13 +44,8 @@ val_sample_ids = range(NUM_TRAIN_SAMPLES, NUM_TRAIN_SAMPLES + NUM_VAL_SAMPLES)
 with open(CONFIG_PATH) as f:
     config = yaml.load(f, Loader=SafeLoader)
 
-if WITH_MLFLOW:
-    mlflow.set_tracking_uri("file:mlruns")
-    mlflow.start_run()
 def main():
 
-    if WITH_MLFLOW:
-        mlflow.log_params(config)
 
     train_dataloader = get_dataloader(
         data_path=DATA_PATH,
@@ -68,40 +61,36 @@ def main():
         **config['dataloader_args']
     )
 
-    encoder = Encoder(
-        **config['model_args']['encoder'],
+    generator = Generator(
+        **config['model_args']['generator'],
     )
-    decoder = Decoder(
-        **config['model_args']['decoder'],
+    critic = Critic(
+        **config['model_args']['critic'],
     )
 
-    model = SupervisedWassersteinAE(
-        encoder=encoder,
-        decoder=decoder,        
+    model = GAN(
+        generator=generator,
+        critic=critic,        
     )
     model.to(device)
 
-    optimizer = AEOptimizers(
+    optimizer = GANOptimizers(
         model=model,
         args=config['optimizer_args'],
     )
-    
-    train_stepper = SupervisedWAETrainStepper(
+    train_stepper = GANTrainStepper(
         model=model,
         optimizer=optimizer,
         **config['train_stepper_args']        
     )
     
-    train_AE(
+    train_GAN(
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         train_stepper=train_stepper,
         model_save_path=MODEL_SAVE_PATH,
         **config['trainer_args']
     )
-
-    if WITH_MLFLOW:
-        mlflow.end_run()
     
 if __name__ == "__main__":
     main()

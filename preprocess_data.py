@@ -15,12 +15,14 @@ from DT_for_WDN_leak_localization.network import WDN
 torch.set_default_dtype(torch.float32)
 
 NET = 1
-NUM_SAMPLES = 30000
+NUM_SAMPLES = 1000
 BATCH_SIZE = 512
+
+TEST_OR_TRAIN = 'test'
 
 PARS_DIM = 3
 
-DATA_PARAMS_PATH = f"conf/net_{str(NET)}/AE_config.yml"
+DATA_PARAMS_PATH = f"conf/net_{str(NET)}/data_preprocessing.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/train_data/network_"
 
 with open(DATA_PARAMS_PATH) as f:
@@ -37,7 +39,7 @@ if not os.path.exists(TRAINED_PREPROCESSOR_SAVE_PATH):
 TRAINED_PREPROCESSOR_SAVE_PATH += f"net_{str(NET)}_preprocessor.pkl"
 
 PROCESSED_DATA_SAVE_PATH = \
-    f'data/processed_data/net_{str(NET)}/train_data'
+    f'data/processed_data/net_{str(NET)}/{TEST_OR_TRAIN}_data'
 if not os.path.exists(PROCESSED_DATA_SAVE_PATH):
     os.makedirs(PROCESSED_DATA_SAVE_PATH)
 
@@ -45,7 +47,7 @@ class NetworkDataset(torch.utils.data.Dataset):
     def __init__(
             self,
             data_path: str,
-            file_ids=range(10000),
+            file_ids=range(NUM_SAMPLES),
     ):
 
         self.data_path_state = data_path
@@ -102,18 +104,21 @@ def main():
         num_workers=0,
     )
 
-    preprocessor = Preprocessor(
-        num_pipes=params['num_pipes'],
-        num_nodes=params['num_nodes'],
-    )
-    
-    for i, (state, _) in enumerate(dataloader):
-        preprocessor.partial_fit(state)
+    if TEST_OR_TRAIN == 'test':    
+        preprocessor = pickle.load(open(TRAINED_PREPROCESSOR_SAVE_PATH, "rb"))
+    else:
+        preprocessor = Preprocessor(
+            num_pipes=params['num_pipes'],
+            num_nodes=params['num_nodes'],
+        )
+        
+        for i, (state, _) in enumerate(dataloader):
+            preprocessor.partial_fit(state)
 
-    print("Done Training Preprocessor")
+        print("Done Training Preprocessor")
 
-    with open(TRAINED_PREPROCESSOR_SAVE_PATH, "wb") as f:
-        pickle.dump(preprocessor, f)
+        with open(TRAINED_PREPROCESSOR_SAVE_PATH, "wb") as f:
+            pickle.dump(preprocessor, f)
     
     state_tensor_to_be_saved = torch.zeros((NUM_SAMPLES, NUM_TIME_STEPS, STATE_DIM))
     pars_tensor_to_be_saved = torch.zeros((NUM_SAMPLES, NUM_TIME_STEPS, PARS_DIM))

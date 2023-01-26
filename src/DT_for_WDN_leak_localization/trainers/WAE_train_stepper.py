@@ -1,8 +1,9 @@
+from attr import dataclass
 from torch import nn
 import torch
 import pdb
 
-from DT_for_WDN_leak_localization.optimizers import Optimizers
+from DT_for_WDN_leak_localization.optimizers import AEOptimizers
 
 def MMD(
     x: torch.Tensor, 
@@ -60,20 +61,26 @@ class SupervisedWAETrainStepper():
     def __init__(
         self,
         model: nn.Module,
-        optimizer: Optimizers,
-        params: dict,
+        optimizer: AEOptimizers,
+        kernel: str,
+        kernel_regu: float,
     ) -> None:
+
         self.model = model
         self.optimizer = optimizer
-        self.kernel = params['training_params']['kernel']
-        self.kernel_regu = params['training_params']['kernel_regu']
+        self.kernel = kernel
+        self.kernel_regu = kernel_regu
 
         self.device = model.device
 
+        # Loss function
         self.loss = nn.MSELoss()
 
     def _sample_latent(self, shape: torch.Tensor) -> torch.Tensor:
         return torch.randn(shape, device=self.device)
+    
+    def step_scheduler(self) -> None:
+        self.optimizer.step_scheduler()
     
     def _compute_losses(
         self, 
@@ -105,8 +112,7 @@ class SupervisedWAETrainStepper():
         pars: torch.Tensor,
         ) -> None:
 
-        self.optimizer.encoder_optimizer.zero_grad()
-        self.optimizer.decoder_optimizer.zero_grad()
+        self.optimizer.zero_grad()
 
         # Compute losses
         mmd_loss, recon_loss = self._compute_losses(state, pars)
@@ -117,14 +123,13 @@ class SupervisedWAETrainStepper():
         # Backpropagation
         loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(self.model.encoder.parameters(), 0.1)
-        torch.nn.utils.clip_grad_norm_(self.model.decoder.parameters(), 0.1)
+        torch.nn.utils.clip_grad_norm_(self.model.encoder.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(self.model.decoder.parameters(), 0.5)
 
-        self.optimizer.encoder_optimizer.step()
-        self.optimizer.decoder_optimizer.step()
+        self.optimizer.step()
 
         return {
-            'mmd_loss': mmd_loss.item(),
+            'latent_loss': mmd_loss.item(),
             'recon_loss': recon_loss.item()
         }
 
@@ -139,100 +144,10 @@ class SupervisedWAETrainStepper():
         mmd_loss, recon_loss = self._compute_losses(state, pars)
 
         return {
-            'mmd_loss': mmd_loss.item(),
+            'latent_loss': mmd_loss.item(),
             'recon_loss': recon_loss.item()
         }
     
-    def scheduler_step(self):
-        self.optimizer.encoder_scheduler.step()
-        self.optimizer.decoder_scheduler.step()
-
-
-
-class UnsupervisedWAETrainStepper():
-
-    def __init__(
-        self,
-        model: nn.Module,
-        optimizer: Optimizers,
-        params: dict,
-    ) -> None:
-        self.model = model
-        self.optimizer = optimizer
-        self.kernel = params['training_params']['kernel']
-        self.kernel_regu = params['training_params']['kernel_regu']
-
-        self.device = model.device
-
-        self.loss = nn.MSELoss()
-
-    def _sample_latent(self, shape: torch.Tensor) -> torch.Tensor:
-        return torch.randn(shape, device=self.device)
+    def save_model(self, path: str) -> None:
+        torch.save(self.model, path)
     
-    def _compute_losses(
-        self, 
-        state: torch.Tensor, 
-        pars: torch.Tensor
-        ):
-
-        latent_state = self.model.encode(state)
-
-        # MMD loss
-        mmd_loss = MMD(
-            x=latent_state, 
-            y=self._sample_latent(latent_state.shape), 
-            kernel=self.kernel, 
-            device=self.device
-            )
-
-        # Reconstruct state
-        recon_state = self.model.decode(latent_state)
-
-        # Reconstruction loss
-        recon_loss = self.loss(state, recon_state)
-
-        return mmd_loss, recon_loss
-
-    def train_step(
-        self,
-        state: torch.Tensor,
-        pars: torch.Tensor,
-        ) -> None:
-
-        self.optimizer.encoder_optimizer.zero_grad()
-        self.optimizer.decoder_optimizer.zero_grad()
-
-        # Compute losses
-        mmd_loss, recon_loss = self._compute_losses(state, pars)
-
-        # Total loss
-        loss = recon_loss + self.kernel_regu * mmd_loss
-
-        # Backpropagation
-        loss.backward()
-        self.optimizer.encoder_optimizer.step()
-        self.optimizer.decoder_optimizer.step()
-
-        return {
-            'mmd_loss': mmd_loss.item(),
-            'recon_loss': recon_loss.item()
-        }
-
-
-    def val_step(
-        self,
-        state: torch.Tensor,
-        pars: torch.Tensor,
-    ) -> None:
-        
-        # Compute losses
-        mmd_loss, recon_loss = self._compute_losses(state, pars)
-
-        return {
-            'mmd_loss': mmd_loss.item(),
-            'recon_loss': recon_loss.item()
-        }
-    
-    def scheduler_step(self):
-        self.optimizer.encoder_scheduler.step()
-        self.optimizer.decoder_scheduler.step()

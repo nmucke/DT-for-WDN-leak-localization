@@ -33,6 +33,61 @@ def get_activation_function(activation_function_name: str = 'leaky_relu'):
     return activation_function
 
 
+class FeedForwardNeuralNetwork(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        hidden_neurons: list,
+    ) -> None:
+
+        super().__init__()
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_neurons = hidden_neurons
+        self.activation = get_activation_function('leaky_relu')
+
+        self.dense_in = nn.Linear(
+            in_features=self.input_dim,
+            out_features=self.hidden_neurons[0],
+            bias=False
+        )
+
+        self.dense_layers = nn.ModuleList(
+            [nn.Linear(
+                in_features=self.hidden_neurons[i],
+                out_features=self.hidden_neurons[i + 1],
+                bias=False
+            ) for i in range(len(self.hidden_neurons) - 1)]
+        )
+
+        self.dense_out = nn.Linear(
+            in_features=self.hidden_neurons[-1],
+            out_features=self.output_dim,
+            bias=False
+        )
+
+        self.batch_norm_in = nn.BatchNorm1d(self.hidden_neurons[0])
+
+        self.batch_norm_layers = nn.ModuleList(
+            [nn.BatchNorm1d(self.hidden_neurons[i + 1]) for i in range(len(self.hidden_neurons) - 1)]
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.dense_in(x)
+        x = self.activation(x)
+        x = self.batch_norm_in(x)
+        for dense_layer in self.dense_layers:
+            x = dense_layer(x)
+            x = self.activation(x)
+            x = self.batch_norm_layers[i](x)
+        x = self.dense_out(x)
+        return x
+
+
+
+
 class Encoder(nn.Module):
     def __init__(
         self, 
@@ -100,7 +155,6 @@ class SupervisedDecoder(nn.Module):
             state_dim: int = 128,
             hidden_neurons: list = [16, 32, 64],
             pars_dim: tuple = (119),
-            pars_embedding_dim: int = 32,
             activation: str = 'leaky_relu'
     ) -> None:
         super().__init__()
@@ -113,9 +167,9 @@ class SupervisedDecoder(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
         if len(pars_dim) == 1:
-            pars_embedding_dim = [pars_embedding_dim]
+            pars_embedding_dim = [latent_dim]
         elif len(pars_dim) == 2:
-            pars_embedding_dim = [pars_embedding_dim, pars_embedding_dim//2]
+            pars_embedding_dim = [latent_dim, latent_dim//2]
 
         total_pars_embedding_dim = sum(pars_embedding_dim)
 

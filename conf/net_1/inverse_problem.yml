@@ -1,0 +1,17 @@
+data_args:
+  num_pipes: 34
+  num_nodes: 31
+  num_time_steps: 24
+
+observation_args:
+  ids_or_labels: 'labels'
+  edge_obs: ['4', '8', '17', '20', '27', '33', '30']
+  node_obs: ['4', '9', '18', '20', '27', '28', '32']
+
+noise_args:
+  noise: 0.01
+
+likelihood_args:
+
+solve_args:
+  num_samples: 1000

@@ -53,7 +53,7 @@ class WDNDataset(Dataset[Any]):
     def __getitem__(self, idx: int) -> any:
         return self.state[idx], self.pars[idx]
 
-def create_dataloader(
+def get_dataloader(
     data_path: str,
     sample_ids: int,
     batch_size: int,

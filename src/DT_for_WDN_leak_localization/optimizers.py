@@ -5,7 +5,7 @@ import pdb
 
 from DT_for_WDN_leak_localization.schedulers import CosineWarmupScheduler
 
-class Optimizers:
+class AEOptimizers:
     """
     Optimizers
     """
@@ -13,66 +13,81 @@ class Optimizers:
     def __init__(
         self, 
         model: nn.Module,
-        params: dict,
+        args: dict,
         ) -> None:
 
         if model.encoder:
-            self.encoder_optimizer = get_optimizer(
-                model=model.encoder,
-                optimizer_type=params['optimizer_params']['type'],
-                optimizer_args=params['optimizer_params']['encoder_args'],
+            self.encoder_optimizer = optim.Adam(
+                model.encoder.parameters(),
+                **args['optimizer']
             )
-            self.encoder_scheduler = get_scheduler(
+            self.encoder_scheduler = CosineWarmupScheduler(
                 optimizer=self.encoder_optimizer,
-                scheduler_type=params['scheduler_params']['type'],
-                scheduler_args=params['scheduler_params']['args'],
+                **args['scheduler']
             )
         
         if model.decoder:
-            self.decoder_optimizer = get_optimizer(
-                model=model.decoder,
-                optimizer_type=params['optimizer_params']['type'],
-                optimizer_args=params['optimizer_params']['decoder_args'],
+            self.decoder_optimizer = optim.Adam(
+                model.decoder.parameters(),
+                **args['optimizer']
             )
-            self.decoder_scheduler = get_scheduler(
+            self.decoder_scheduler = CosineWarmupScheduler(
                 optimizer=self.decoder_optimizer,
-                scheduler_type=params['scheduler_params']['type'],
-                scheduler_args=params['scheduler_params']['args'],
+                **args['scheduler']
             )
-
-def get_optimizer(
-    model: nn.Module,
-    optimizer_type: str,
-    optimizer_args: dict,
-    ) -> optim.Optimizer:
-    """Get optimizer"""
     
-    optimizer_factory = {
-        'Adam': optim.Adam,
-        'SGD': optim.SGD,
-        'RMSprop': optim.RMSprop,
-    }
-    return optimizer_factory[optimizer_type](
-        model.parameters(),
-        **optimizer_args,
-    )
+    def step(self) -> None:
+        self.encoder_optimizer.step()
+        self.decoder_optimizer.step()
+    
+    def step_scheduler(self) -> None:
+        self.encoder_scheduler.step()
+        self.decoder_scheduler.step()
+    
+    def zero_grad(self) -> None:
+        self.encoder_optimizer.zero_grad()
+        self.decoder_optimizer.zero_grad()
 
-def get_scheduler(
-    optimizer: Optimizers,
-    scheduler_type: str,
-    scheduler_args: dict,
-    ):
 
-    scheduler_factory = {
-        'StepLR': optim.lr_scheduler.StepLR,
-        'MultiStepLR': optim.lr_scheduler.MultiStepLR,
-        'ExponentialLR': optim.lr_scheduler.ExponentialLR,
-        'CosineAnnealingLR': optim.lr_scheduler.CosineAnnealingLR,
-        'ReduceLROnPlateau': optim.lr_scheduler.ReduceLROnPlateau,
-        'CosineWarmupScheduler': CosineWarmupScheduler
-    }
+class GANOptimizers:
+    """
+    Optimizers
+    """
 
-    return scheduler_factory[scheduler_type](
-        optimizer=optimizer,
-        **scheduler_args,
-    )
+    def __init__(
+        self, 
+        model: nn.Module,
+        args: dict,
+        ) -> None:
+
+        if model.generator:
+            self.generator_optimizer = optim.Adam(
+                model.generator.parameters(),
+                **args['optimizer']
+            )
+            self.generator_scheduler = CosineWarmupScheduler(
+                optimizer=self.generator_optimizer,
+                **args['scheduler']
+            )
+        
+        if model.critic:
+            self.critic_optimizer = optim.Adam(
+                model.critic.parameters(),
+                **args['optimizer']
+            )
+            self.critic_scheduler = CosineWarmupScheduler(
+                optimizer=self.critic_optimizer,
+                **args['scheduler']
+            )
+    
+    def step(self) -> None:
+        self.generator_optimizer.step()
+        self.critic_optimizer.step()
+    
+    def step_scheduler(self) -> None:
+        self.generator_scheduler.step()
+        self.critic_scheduler.step()
+    
+    def zero_grad(self) -> None:
+        self.generator_optimizer.zero_grad()
+        self.critic_optimizer.zero_grad()
