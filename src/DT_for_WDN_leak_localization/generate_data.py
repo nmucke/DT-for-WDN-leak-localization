@@ -16,7 +16,7 @@ import ray
 
 def get_demand_time_series_noise(t_start, t_end, t_step, base_value):
 
-    noise_std = 0*1e-2*base_value
+    noise_std = 5e-2*base_value
     demand_noise = np.random.normal(
         loc=0,
         scale=noise_std, 

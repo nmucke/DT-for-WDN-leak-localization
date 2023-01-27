@@ -23,9 +23,9 @@ NET = 2
 CONFIG_PATH = f"conf/net_{str(NET)}/Supervised_WAE.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
-NUM_SAMPLES = 100
-NUM_TRAIN_SAMPLES = 80
-NUM_VAL_SAMPLES = 20
+NUM_SAMPLES = 10000
+NUM_TRAIN_SAMPLES = 8000
+NUM_VAL_SAMPLES = 2000
 
 NUM_WORKERS = 4
 CUDA = True

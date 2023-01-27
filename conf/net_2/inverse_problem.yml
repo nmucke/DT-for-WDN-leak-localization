@@ -5,13 +5,13 @@ data_args:
 
 observation_args:
   ids_or_labels: 'labels'
-  edge_obs: ['4', '8', '17', '20', '27', '33', '30']
-  node_obs: ['4', '9', '18', '20', '27', '28', '32']
+  edge_obs: ['10', '20', '40', '50', '60', '119', '149', '116', '193', '247', '271']
+  node_obs: ['1', '2', '3', '117', '143', '193', '181', '213', '237']
 
 noise_args:
-  noise: 0.01
+  noise: 0.05
 
 likelihood_args:
 
 solve_args:
-  num_samples: 100
+  num_samples: 500

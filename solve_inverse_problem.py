@@ -22,11 +22,11 @@ from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
-NET = 2
+NET = 1
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
-NUM_SAMPLES = 100
+NUM_SAMPLES = 1000
 
 NUM_WORKERS = 25
 
@@ -68,7 +68,7 @@ def main():
     correct_leak_location_list = []
 
     pbar = tqdm(
-        range(NUM_SAMPLES),
+        range(0, NUM_SAMPLES),
         bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'
         )
     for i in pbar:
@@ -111,7 +111,7 @@ def main():
             'Accuracy': np.sum(correct_leak_location_list)/len(correct_leak_location_list),
         })
 
-        #metrics.plot_posterior_on_graph()
+        metrics.plot_posterior_on_graph()
 
 
 

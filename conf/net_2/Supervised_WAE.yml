@@ -10,13 +10,13 @@ dataloader_args:
 model_args:
   encoder:
     state_dim: 216
-    latent_dim: 8
-    hidden_neurons: [32]
+    latent_dim: 16
+    hidden_neurons: [128]
     embed_dim: 4
   decoder:
-    latent_dim: 8
+    latent_dim: 16
     state_dim: 216
-    hidden_neurons: [32]
+    hidden_neurons: [128]
     embed_dim: 4
     pars_dims: [119, 24]
 
@@ -35,8 +35,8 @@ data_args:
   include_leak_area: False
 
 trainer_args:
-  num_epochs: 1000
-  patience: 50
+  num_epochs: 500
+  patience: 25
 
 
 
