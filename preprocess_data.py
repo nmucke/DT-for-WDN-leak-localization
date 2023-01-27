@@ -14,23 +14,21 @@ from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
-NET = 1
-NUM_SAMPLES = 1000
-BATCH_SIZE = 512
+NET = 2
+NUM_SAMPLES = 10000
+BATCH_SIZE = 10
 
-TEST_OR_TRAIN = 'test'
+TEST_OR_TRAIN = 'train'
 
 PARS_DIM = 3
 
-DATA_PARAMS_PATH = f"conf/net_{str(NET)}/data_preprocessing.yml"
+DATA_CONFIG_PATH = f"conf/net_{str(NET)}/data_preprocessing.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/train_data/network_"
 
-with open(DATA_PARAMS_PATH) as f:
+with open(DATA_CONFIG_PATH) as f:
     params = yaml.load(f, Loader=SafeLoader)
-params = params['data_params']
 STATE_DIM = params['num_pipes'] + params['num_nodes']
 NUM_TIME_STEPS = params['num_time_steps']
-
 
 TRAINED_PREPROCESSOR_SAVE_PATH = \
     f'trained_preprocessors/'

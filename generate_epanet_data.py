@@ -8,13 +8,13 @@ import os
 
 from DT_for_WDN_leak_localization.generate_data import simulate_WDN
 
-NUM_CPUS = 3
+NUM_CPUS = 30
 
-NET = 1
+NET = 2
 WITH_LEAK = True
-TRAIN_OR_TEST = 'test'
+TRAIN_OR_TEST = 'train'
 
-NUM_SAMPLES = 1000
+NUM_SAMPLES = 10000
 
 LOWER_LEAK_AREA = 0.002
 UPPER_LEAK_AREA = 0.004
@@ -67,9 +67,10 @@ def main():
             high=UPPER_LEAK_AREA,
             size=NUM_SAMPLES
             )
+        results = []
         for id, leak_pipe, leak_area in zip(sample_ids, leak_pipes, leak_areas):
-            result_dict_leak = simulate_WDN(
-            #result_dict_leak = simulate_WDN.remote(
+            #result_dict_leak = simulate_WDN(
+            result_dict_leak = simulate_WDN.remote(
                 inp_file=epanet_data_path,
                 leak={
                     'pipe': leak_pipe,
@@ -79,6 +80,8 @@ def main():
                 data_save_path=save_data_path,
                 total_inflow_based_demand=total_inflow_based_demand
                 )
+            results.append(result_dict_leak)
+        results = ray.get(results)
 
     else:
         for id in sample_ids:

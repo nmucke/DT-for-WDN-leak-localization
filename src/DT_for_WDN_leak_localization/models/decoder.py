@@ -138,7 +138,7 @@ class Decoder(nn.Module):
         latent_state: torch.Tensor, 
         pars: torch.Tensor
         ) -> torch.Tensor:
-
+        
         pars_attn = self.initial_pars_encoder(pars)
 
         latent_state = self.initial_state_encoder(latent_state)

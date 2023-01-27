@@ -88,7 +88,7 @@ class SupervisedWAETrainStepper():
         pars: torch.Tensor
         ):
 
-        latent_state = self.model.encode(state)
+        latent_state = self.model.encoder(state)
 
         # MMD loss
         mmd_loss = MMD(
@@ -97,9 +97,9 @@ class SupervisedWAETrainStepper():
             kernel=self.kernel, 
             device=self.device
             )
-
+            
         # Reconstruct state
-        recon_state = self.model.decode(latent_state, pars)
+        recon_state = self.model.decoder(latent_state, pars)
 
         # Reconstruction loss
         recon_loss = self.loss(state, recon_state)

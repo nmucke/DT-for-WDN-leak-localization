@@ -19,13 +19,13 @@ torch.set_default_dtype(torch.float32)
 
 WITH_MLFLOW = False
 
-NET = 1
+NET = 2
 CONFIG_PATH = f"conf/net_{str(NET)}/Supervised_WAE.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
-NUM_SAMPLES = 1500
-NUM_TRAIN_SAMPLES = 1000
-NUM_VAL_SAMPLES = 500
+NUM_SAMPLES = 100
+NUM_TRAIN_SAMPLES = 80
+NUM_VAL_SAMPLES = 20
 
 NUM_WORKERS = 4
 CUDA = True

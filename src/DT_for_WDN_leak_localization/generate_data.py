@@ -25,7 +25,7 @@ def get_demand_time_series_noise(t_start, t_end, t_step, base_value):
     return demand_noise
 
 
-#@ray.remote
+@ray.remote(num_returns=1)
 def simulate_WDN(
     inp_file, 
     leak=None, 
@@ -152,5 +152,5 @@ def simulate_WDN(
     nx.write_gpickle(result_dict, f'{data_save_path}{id}')
     
     print(id)
-    #return result_dict
+    return None
 

@@ -22,7 +22,7 @@ from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
-NET = 1
+NET = 2
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
@@ -48,6 +48,7 @@ def main():
     wdn = WDN(
         data_path=f"{DATA_PATH}/network_0",
     )
+    
     observation_model = ObservationModel(
         wdn=wdn,
         **config['observation_args'],        
@@ -93,7 +94,7 @@ def main():
             true_data=true_data,
             forward_model=forward_model,
             likelihood=likelihood,
-            time=range(2,5),
+            time=range(2,3),
             **config['solve_args'],
         )
 
@@ -109,6 +110,8 @@ def main():
             'topological_distance': np.mean(topological_distance_list),
             'Accuracy': np.sum(correct_leak_location_list)/len(correct_leak_location_list),
         })
+
+        #metrics.plot_posterior_on_graph()
 
 
 

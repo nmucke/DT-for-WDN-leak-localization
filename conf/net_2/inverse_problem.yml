@@ -1,6 +1,6 @@
 data_args:
-  num_pipes: 34
-  num_nodes: 31
+  num_pipes: 119
+  num_nodes: 97
   num_time_steps: 24
 
 observation_args:
