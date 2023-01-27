@@ -22,13 +22,17 @@ from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
+# Set seed for reproducibility
+torch.manual_seed(0)
+np.random.seed(0)
+
 NET = 1
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
-NUM_SAMPLES = 1000
+NUM_SAMPLES = 100
 
-NUM_WORKERS = 25
+NUM_WORKERS = 30
 
 MODEL_LOAD_PATH = f"trained_models/net_{str(NET)}/"
 #MODEL_LOAD_NAME = f"GAN_net_{str(NET)}.pt"
@@ -94,7 +98,7 @@ def main():
             true_data=true_data,
             forward_model=forward_model,
             likelihood=likelihood,
-            time=range(2,3),
+            time=range(6, 16),
             **config['solve_args'],
         )
 
@@ -111,20 +115,19 @@ def main():
             'Accuracy': np.sum(correct_leak_location_list)/len(correct_leak_location_list),
         })
 
-        metrics.plot_posterior_on_graph()
+        #metrics.plot_posterior_on_graph()
 
-
-
-        '''
-        plt.figure()
-        plt.plot(posterior[0].detach().numpy())
-        plt.axvline(x=true_data.leak, color='r')
-        plt.show()
-        pdb.set_trace()
-        '''
-        
-
-
+    topological_distance_list = np.array(topological_distance_list)
+    correct_leak_location_list = np.array(correct_leak_location_list)
+    
+    np.save(
+        f"results/net_{str(NET)}/topological_distance_noise_{config['noise_args']['noise']}_sensors_{len(config['observation_args']['edge_obs'])}.npy", 
+        topological_distance_list
+        )
+    np.save(
+        f"results/net_{str(NET)}/accuracy_noise_{config['noise_args']['noise']}_sensors_{len(config['observation_args']['edge_obs'])}.npy",
+        correct_leak_location_list
+        )
     
 if __name__ == "__main__":
     ray.init(num_cpus=NUM_WORKERS)

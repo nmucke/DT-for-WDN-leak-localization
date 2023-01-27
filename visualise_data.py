@@ -19,7 +19,7 @@ DATA_PATH = f"data/raw_data/net_{str(NET)}/train_data"
 
 FIGURE_SAVE_PATH = f"figures/net_{str(NET)}/"
 
-NUM_SAMPLES = 10000
+NUM_SAMPLES = 700
 
 PREPROCESSOR_LOAD_PATH = f"trained_preprocessors/net_{str(NET)}_preprocessor.pkl"
 
@@ -67,7 +67,7 @@ def main():
         node_size = 30
     else:
         node_size = 15
-        
+
     plt.figure()
     nx.draw_networkx(
         G=wdn.graph, 

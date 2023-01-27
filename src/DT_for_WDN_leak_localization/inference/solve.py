@@ -66,7 +66,16 @@ def solve_inverse_problem(
 
         posterior_k = torch.stack(ray.get(posterior_k))
 
-        prior = posterior_k / torch.sum(posterior_k)
+        posterior_k = posterior_k / torch.sum(posterior_k)
+
+        # check convergence
+        kl_divergence = torch.sum(prior * torch.log(prior / posterior_k))
+
+        if kl_divergence < 1e-3:
+            posterior_list.append(posterior_k.detach())
+            return posterior_list
+        
+        prior = posterior_k
         posterior_list.append(prior.detach())
-    
+        
     return posterior_list

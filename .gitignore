@@ -3,6 +3,9 @@
 # Ignore data
 data/
 
+# Ignore results
+results/
+
 # Ignore mlflow
 mlruns/
 

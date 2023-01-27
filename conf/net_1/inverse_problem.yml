@@ -7,6 +7,10 @@ observation_args:
   ids_or_labels: 'labels'
   edge_obs: ['4', '8', '17', '20', '27', '33', '30']
   node_obs: ['4', '9', '18', '20', '27', '28', '32']
+  #edge_obs: ['4', '8', '30', '17', '33']
+  #node_obs: ['4', '9', '28', '18', '32']
+  #edge_obs: ['4', '8', '33']
+  #node_obs: ['4', '9', '32']
 
 noise_args:
   noise: 0.01
@@ -14,4 +18,4 @@ noise_args:
 likelihood_args:
 
 solve_args:
-  num_samples: 100
+  num_samples: 500
