@@ -9,7 +9,7 @@ observation_args:
   node_obs: ['1', '2', '3', '117', '143', '193', '181', '213', '237']
 
 noise_args:
-  noise: 0.05
+  noise: 0.01
 
 likelihood_args:
 

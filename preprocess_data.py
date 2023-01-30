@@ -14,8 +14,8 @@ from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
-NET = 2
-NUM_SAMPLES = 10000
+NET = 3
+NUM_SAMPLES = 800
 BATCH_SIZE = 10
 
 TEST_OR_TRAIN = 'train'

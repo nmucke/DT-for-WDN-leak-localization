@@ -16,23 +16,50 @@ def compute_posterior_k(
     num_samples: int,
     leak_location: int,
     t_idx: int,
+    mini_batches: bool = False,
 ):
 
-    # Compute ensemble of states
-    state_pred = forward_model(
-        num_samples=num_samples, 
-        leak_location=torch.tensor([leak_location]), 
-        time=torch.tensor([t_idx])
-        )
 
-    # Likelihood of each sample
-    likelihood_k = likelihood.compute_likelihood(
-        state=state_pred,
-        obs=obs
-        )
+    if mini_batches:
+        batch_size = 10
 
-    # Compute posterior
-    mean_likelihood_k = torch.mean(likelihood_k) + 1e-8
+        likelihood_mean_k = []
+        for _ in range(0, num_samples, batch_size):
+
+            # Compute ensemble of states
+            state_pred = forward_model(
+                num_samples=num_samples, 
+                leak_location=torch.tensor([leak_location]), 
+                time=torch.tensor([t_idx])
+            ).detach()
+
+            # Likelihood of each sample
+            likelihood_k = likelihood.compute_likelihood(
+                state=state_pred,
+                obs=obs
+                )
+            
+            likelihood_mean_k.append(torch.mean(likelihood_k))
+        
+        likelihood_mean_k = torch.stack(likelihood_mean_k)
+        mean_likelihood_k = torch.mean(likelihood_mean_k) + 1e-8
+            
+    else:
+        # Compute ensemble of states
+        state_pred = forward_model(
+            num_samples=num_samples, 
+            leak_location=torch.tensor([leak_location]), 
+            time=torch.tensor([t_idx])
+            ).detach()
+
+        # Likelihood of each sample
+        likelihood_k = likelihood.compute_likelihood(
+            state=state_pred,
+            obs=obs
+            )
+
+        # Compute posterior
+        mean_likelihood_k = torch.mean(likelihood_k) + 1e-8
 
     posterior_k = mean_likelihood_k * prior
 

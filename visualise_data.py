@@ -13,15 +13,13 @@ from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
-NET = 2
+NET = 3
 CONFIG_PATH = f"conf/net_{str(NET)}/data_preprocessing.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/train_data"
 
 FIGURE_SAVE_PATH = f"figures/net_{str(NET)}/"
 
-NUM_SAMPLES = 700
-
-PREPROCESSOR_LOAD_PATH = f"trained_preprocessors/net_{str(NET)}_preprocessor.pkl"
+NUM_SAMPLES = 600
 
 with open(CONFIG_PATH) as f:
     config = yaml.load(f, Loader=SafeLoader)
@@ -39,7 +37,7 @@ def main():
             data_path=f"{DATA_PATH}/network_{i}",
         )
         _demand = wdn.nodes.demand.iloc[0:num_time_steps].values
-
+        
         demand[i] = _demand
 
     demand[demand < 0] = 0
@@ -143,7 +141,98 @@ def main():
         plt.grid()
         plt.savefig(f"{FIGURE_SAVE_PATH}node_demand.pdf")
         plt.show()
+    
+    if NET == 3:
+        
+        plotting_nodes =  [392, 393, 394, 395]
 
+        plt.figure()
+        for node_id in plotting_nodes:
+            
+            demand_node = demand[:, :, node_id]
+            demand_node_mean = np.mean(demand_node, axis=0)
+            demand_node_std = np.std(demand_node, axis=0)
+
+            node_label = wdn.nodes.index_to_label[node_id]
+
+            plt.plot(
+                np.arange(num_time_steps),
+                demand_node_mean, 
+                linewidth=2,
+                label=f"Valve {node_label}"
+                )
+            plt.fill_between(
+                np.arange(num_time_steps), 
+                demand_node_mean - demand_node_std, 
+                demand_node_mean + demand_node_std, 
+                alpha=0.25
+                )
+        plt.xlabel("Time [Hours]")
+        plt.ylabel("Total demand [l/s]")
+        plt.legend()
+        plt.grid()
+        plt.savefig(f"{FIGURE_SAVE_PATH}valve_demand.pdf")
+        plt.show()
+
+        plotting_nodes = [380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391]
+
+        plt.figure()
+        for node_id in plotting_nodes:
+            
+            demand_node = demand[:, :, node_id]
+            demand_node_mean = np.mean(demand_node, axis=0)
+            demand_node_std = np.std(demand_node, axis=0)
+
+            node_label = wdn.nodes.index_to_label[node_id]
+
+            plt.plot(
+                np.arange(num_time_steps),
+                demand_node_mean, 
+                linewidth=2,
+                label=f"Pump {node_label}"
+                )
+            plt.fill_between(
+                np.arange(num_time_steps), 
+                demand_node_mean - demand_node_std, 
+                demand_node_mean + demand_node_std, 
+                alpha=0.25
+                )
+        plt.xlabel("Time [Hours]")
+        plt.ylabel("Total demand [l/s]")
+        plt.legend()
+        plt.grid()
+        plt.savefig(f"{FIGURE_SAVE_PATH}pump_demand.pdf")
+        plt.show()
+
+        plotting_nodes = [10, 100, 200, 250, 300, 350]
+
+        plt.figure()
+        for node_id in plotting_nodes:
+            
+            demand_node = demand[:, :, node_id]
+            demand_node_mean = np.mean(demand_node, axis=0)
+            demand_node_std = np.std(demand_node, axis=0)
+
+            node_label = wdn.nodes.index_to_label[node_id]
+
+            plt.plot(
+                np.arange(num_time_steps),
+                demand_node_mean, 
+                linewidth=2,
+                label=f"Node {node_label}"
+                )
+            plt.fill_between(
+                np.arange(num_time_steps), 
+                demand_node_mean - demand_node_std, 
+                demand_node_mean + demand_node_std, 
+                alpha=0.5
+                )
+        plt.xlabel("Time [Hours]")
+        plt.ylabel("Total demand [l/s]")
+        plt.legend()
+        plt.grid()
+        plt.savefig(f"{FIGURE_SAVE_PATH}node_demand.pdf")
+        plt.show()
 
 if __name__ == "__main__":
     main()

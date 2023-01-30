@@ -10,11 +10,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from DT_for_WDN_leak_localization.inference.forward_model import ForwardModel
-
 from DT_for_WDN_leak_localization.inference.likelihood import Likelihood
 from DT_for_WDN_leak_localization.inference.metrics import InverseProblemMetrics
 from DT_for_WDN_leak_localization.inference.noise import ObservationNoise
-
 from DT_for_WDN_leak_localization.inference.observation import ObservationModel
 from DT_for_WDN_leak_localization.inference.solve import solve_inverse_problem
 from DT_for_WDN_leak_localization.inference.true_data import TrueData
@@ -30,7 +28,7 @@ NET = 1
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
-NUM_SAMPLES = 100
+NUM_SAMPLES = 30
 
 NUM_WORKERS = 30
 
@@ -53,83 +51,87 @@ def main():
         data_path=f"{DATA_PATH}/network_0",
     )
     
-    observation_model = ObservationModel(
-        wdn=wdn,
-        **config['observation_args'],        
-    )
-    observation_noise = ObservationNoise(
-        **config['noise_args'],
-    )
+    for obs_case_key in config['observation_args'].keys():
+        for noise in config['noise_args']['noise']:
+            
+            observation_model = ObservationModel(
+                wdn=wdn,
+                **config['observation_args'][obs_case_key],        
+            )
+            observation_noise = ObservationNoise(
+                noise=noise#**config['noise_args'],
+            )
 
-    #forward_model = ForwardModel(
-    #    generator=model.generator,
-    #)
-    forward_model = ForwardModel(
-        generator=model.decoder,
-    )
+            #forward_model = ForwardModel(
+            #    generator=model.generator,
+            #)
+            forward_model = ForwardModel(
+                generator=model.decoder,
+            )
 
-    topological_distance_list = []
-    correct_leak_location_list = []
+            topological_distance_list = []
+            correct_leak_location_list = []
 
-    pbar = tqdm(
-        range(0, NUM_SAMPLES),
-        bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'
-        )
-    for i in pbar:
-        
-        # Load true data
-        wdn = WDN(
-            data_path=f"{DATA_PATH}/network_{str(i)}",
-        )
-        true_data = TrueData(
-            wdn=wdn,
-            preprocessor=preprocessor,
-            observation_model=observation_model,
-            observation_noise=observation_noise,
-        )
-        
-        likelihood = Likelihood(
-            observation_model=observation_model,
-            observation_noise=observation_noise,
-            #**config['likelihood_args'],
-        )
+            pbar = tqdm(
+                range(0, NUM_SAMPLES),
+                bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'
+                )
+            for i in pbar:
+                
+                # Load true data
+                wdn = WDN(
+                    data_path=f"{DATA_PATH}/network_{str(i)}",
+                )
+                true_data = TrueData(
+                    wdn=wdn,
+                    preprocessor=preprocessor,
+                    observation_model=observation_model,
+                    observation_noise=observation_noise,
+                )
+                
+                likelihood = Likelihood(
+                    observation_model=observation_model,
+                    observation_noise=observation_noise,
+                    #**config['likelihood_args'],
+                )
 
-        posterior = solve_inverse_problem(
-            true_data=true_data,
-            forward_model=forward_model,
-            likelihood=likelihood,
-            time=range(6, 16),
-            **config['solve_args'],
-        )
+                posterior = solve_inverse_problem(
+                    true_data=true_data,
+                    forward_model=forward_model,
+                    likelihood=likelihood,
+                    time=range(6, 7),
+                    **config['solve_args'],
+                )
 
-        metrics = InverseProblemMetrics(
-            true_data=true_data,
-            posterior=posterior,
-        )
+                metrics = InverseProblemMetrics(
+                    true_data=true_data,
+                    posterior=posterior,
+                )
 
-        topological_distance_list.append(metrics.topological_distance)
-        correct_leak_location_list.append(metrics.is_correct)
+                topological_distance_list.append(metrics.topological_distance)
+                correct_leak_location_list.append(metrics.is_correct)
 
-        pbar.set_postfix({
-            'topological_distance': np.mean(topological_distance_list),
-            'Accuracy': np.sum(correct_leak_location_list)/len(correct_leak_location_list),
-        })
+                pbar.set_postfix({
+                    'topological_distance': np.mean(topological_distance_list),
+                    'Accuracy': np.sum(correct_leak_location_list)/len(correct_leak_location_list),
+                })
 
-        #metrics.plot_posterior_on_graph()
+                #metrics.plot_posterior_on_graph()
 
-    topological_distance_list = np.array(topological_distance_list)
-    correct_leak_location_list = np.array(correct_leak_location_list)
-    
-    np.save(
-        f"results/net_{str(NET)}/topological_distance_noise_{config['noise_args']['noise']}_sensors_{len(config['observation_args']['edge_obs'])}.npy", 
-        topological_distance_list
-        )
-    np.save(
-        f"results/net_{str(NET)}/accuracy_noise_{config['noise_args']['noise']}_sensors_{len(config['observation_args']['edge_obs'])}.npy",
-        correct_leak_location_list
-        )
+            topological_distance_list = np.array(topological_distance_list)
+            correct_leak_location_list = np.array(correct_leak_location_list)
+            
+            np.save(
+                f"results/net_{str(NET)}/topological_distance_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy", 
+                topological_distance_list
+                )
+            np.save(
+                f"results/net_{str(NET)}/accuracy_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy",
+                correct_leak_location_list
+                )
     
 if __name__ == "__main__":
+    ray.shutdown()
     ray.init(num_cpus=NUM_WORKERS)
     main()
     ray.shutdown()

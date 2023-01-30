@@ -87,7 +87,7 @@ class Decoder(nn.Module):
         self.flatten = nn.Flatten()
 
         hidden_neurons = [latent_dim*embed_dim] + hidden_neurons
-        self.dim_reduction_layers = nn.ModuleList(
+        self.dim_increase_layers = nn.ModuleList(
             [DimIncreaseLayer(
                 in_features=hidden_neurons[i],
                 out_features=hidden_neurons[i+1]
@@ -95,7 +95,7 @@ class Decoder(nn.Module):
              for i in range(len(hidden_neurons)-1)]
         )
         
-        self.final_dim_reduction_layer = DimIncreaseLayer(
+        self.final_dim_increase_layer = DimIncreaseLayer(
                 in_features=hidden_neurons[-1],
                 out_features=state_dim
             )
@@ -149,10 +149,10 @@ class Decoder(nn.Module):
 
         latent_state = self.flatten(latent_state)
 
-        for layer in self.dim_reduction_layers:
+        for layer in self.dim_increase_layers:
             latent_state = layer(latent_state)
 
-        latent_state = self.final_dim_reduction_layer(latent_state)
+        latent_state = self.final_dim_increase_layer(latent_state)
 
         latent_state = self.unflatten(latent_state)
         latent_state = self.final_embed_dim_increase(latent_state)

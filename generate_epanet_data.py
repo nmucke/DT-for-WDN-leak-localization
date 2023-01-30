@@ -8,9 +8,9 @@ import os
 
 from DT_for_WDN_leak_localization.generate_data import simulate_WDN
 
-NUM_CPUS = 30
+NUM_CPUS = 20
 
-NET = 2
+NET = 3
 WITH_LEAK = True
 TRAIN_OR_TEST = 'train'
 
@@ -44,7 +44,7 @@ def main():
     link_list = \
         [link for link in link_list if link not in pump_list + valve_list]
     
-    sample_ids = range(0, NUM_SAMPLES)
+    sample_ids = range(800, NUM_SAMPLES)
     if WITH_LEAK:
         if TRAIN_OR_TEST == 'train':
             leak_pipes_id = np.random.randint(
