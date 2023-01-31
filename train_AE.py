@@ -28,7 +28,7 @@ NUM_TRAIN_SAMPLES = 26000
 NUM_VAL_SAMPLES = 4000
 
 NUM_WORKERS = 4
-CUDA = True
+CUDA = False
 
 MODEL_SAVE_PATH = f"trained_models/net_{str(NET)}/"
 if not os.path.exists(MODEL_SAVE_PATH):
@@ -39,6 +39,8 @@ MODEL_SAVE_PATH = os.path.join(MODEL_SAVE_PATH, model_save_name)
 
 if CUDA:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+else:
+    device = torch.device("cpu")
 
 train_sample_ids = range(NUM_TRAIN_SAMPLES)
 val_sample_ids = range(NUM_TRAIN_SAMPLES, NUM_TRAIN_SAMPLES + NUM_VAL_SAMPLES)

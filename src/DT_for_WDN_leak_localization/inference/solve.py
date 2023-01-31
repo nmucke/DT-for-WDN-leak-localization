@@ -16,12 +16,11 @@ def compute_posterior_k(
     num_samples: int,
     leak_location: int,
     t_idx: int,
-    mini_batches: bool = False,
+    batch_size: int = None,
 ):
 
 
-    if mini_batches:
-        batch_size = 10
+    if batch_size is not None:
 
         likelihood_mean_k = []
         for _ in range(0, num_samples, batch_size):
@@ -71,10 +70,13 @@ def solve_inverse_problem(
     likelihood: Likelihood,
     num_samples: int,
     time: list,
+    prior: torch.Tensor = None,
+    batch_size: bool = False,
     ) -> torch.Tensor:
     """Solve the inverse problem"""
 
-    prior = torch.ones(len(true_data.wdn.edges.ids)) / len(true_data.wdn.edges.ids)
+    if prior is None:
+        prior = torch.ones(len(true_data.wdn.edges.ids)) / len(true_data.wdn.edges.ids)
 
     posterior_list = []
     for t_idx in time:
@@ -89,6 +91,7 @@ def solve_inverse_problem(
                 num_samples=num_samples,
                 leak_location=leak_location,
                 t_idx=t_idx,
+                batch_size=batch_size,
             ))
 
         posterior_k = torch.stack(ray.get(posterior_k))

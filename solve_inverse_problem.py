@@ -24,16 +24,23 @@ torch.set_default_dtype(torch.float32)
 torch.manual_seed(0)
 np.random.seed(0)
 
-NET = 1
+NET = 2
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
 NUM_SAMPLES = 30
 
-NUM_WORKERS = 30
+NUM_WORKERS = 20
+
+PLOT = False
+
+# Set batch size to 1 if NET == 3. This is necessary if the memory is not enough
+if NET == 3:
+    BATCH_SIZE = 50
+else:
+    BATCH_SIZE = None
 
 MODEL_LOAD_PATH = f"trained_models/net_{str(NET)}/"
-#MODEL_LOAD_NAME = f"GAN_net_{str(NET)}.pt"
 MODEL_LOAD_NAME = f"Supervised_WAE_net_{str(NET)}.pt"
 MODEL_LOAD_PATH = os.path.join(MODEL_LOAD_PATH, MODEL_LOAD_NAME)
 
@@ -41,6 +48,8 @@ PREPROCESSOR_LOAD_PATH = f"trained_preprocessors/net_{str(NET)}_preprocessor.pkl
 
 with open(CONFIG_PATH) as f:
     config = yaml.load(f, Loader=SafeLoader)
+
+save_string = f"results/net_{str(NET)}/"
 
 def main():
 
@@ -59,12 +68,9 @@ def main():
                 **config['observation_args'][obs_case_key],        
             )
             observation_noise = ObservationNoise(
-                noise=noise#**config['noise_args'],
+                noise=noise,
             )
 
-            #forward_model = ForwardModel(
-            #    generator=model.generator,
-            #)
             forward_model = ForwardModel(
                 generator=model.decoder,
             )
@@ -82,30 +88,37 @@ def main():
                 wdn = WDN(
                     data_path=f"{DATA_PATH}/network_{str(i)}",
                 )
+
+                # Set up true data
                 true_data = TrueData(
                     wdn=wdn,
                     preprocessor=preprocessor,
                     observation_model=observation_model,
                     observation_noise=observation_noise,
                 )
-                
+
+                # Set up likelihood
                 likelihood = Likelihood(
                     observation_model=observation_model,
                     observation_noise=observation_noise,
                     #**config['likelihood_args'],
                 )
 
+                # Solve inverse problem
                 posterior = solve_inverse_problem(
                     true_data=true_data,
                     forward_model=forward_model,
                     likelihood=likelihood,
-                    time=range(6, 7),
+                    time=range(6, 9),
+                    prior=None,
+                    batch_size=BATCH_SIZE,
                     **config['solve_args'],
                 )
 
+                # Compute metrics
                 metrics = InverseProblemMetrics(
                     true_data=true_data,
-                    posterior=posterior,
+                    posterior=posterior
                 )
 
                 topological_distance_list.append(metrics.topological_distance)
@@ -115,18 +128,25 @@ def main():
                     'topological_distance': np.mean(topological_distance_list),
                     'Accuracy': np.sum(correct_leak_location_list)/len(correct_leak_location_list),
                 })
-
-                #metrics.plot_posterior_on_graph()
+                
+                if PLOT:
+                    metrics.plot_posterior_on_graph(
+                        #edge_obs_labels=observation_model.edge_obs_labels,
+                        node_obs_labels=observation_model.node_obs_labels
+                        )
 
             topological_distance_list = np.array(topological_distance_list)
             correct_leak_location_list = np.array(correct_leak_location_list)
             
+            # Save results
+            save_string_case  = save_string \
+                + f"_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy"
             np.save(
-                f"results/net_{str(NET)}/topological_distance_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy", 
+                f"results/net_{str(NET)}/topological_distance{save_string_case}", 
                 topological_distance_list
                 )
             np.save(
-                f"results/net_{str(NET)}/accuracy_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy",
+                f"results/net_{str(NET)}/accuracy{save_string_case}",
                 correct_leak_location_list
                 )
     
