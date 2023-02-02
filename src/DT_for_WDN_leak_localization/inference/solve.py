@@ -27,7 +27,7 @@ def compute_posterior_k(
 
             # Compute ensemble of states
             state_pred = forward_model(
-                num_samples=num_samples, 
+                num_samples=batch_size, 
                 leak_location=torch.tensor([leak_location]), 
                 time=torch.tensor([t_idx])
             ).detach()
@@ -36,7 +36,7 @@ def compute_posterior_k(
             likelihood_k = likelihood.compute_likelihood(
                 state=state_pred,
                 obs=obs
-                )
+            ).detach()
             
             likelihood_mean_k.append(torch.mean(likelihood_k))
         

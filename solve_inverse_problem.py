@@ -28,15 +28,17 @@ NET = 2
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
-NUM_SAMPLES = 30
+NUM_SAMPLES = 100
 
-NUM_WORKERS = 20
+NUM_WORKERS = 25
 
 PLOT = False
 
 # Set batch size to 1 if NET == 3. This is necessary if the memory is not enough
 if NET == 3:
     BATCH_SIZE = 50
+elif NET == 2:
+    BATCH_SIZE = 250
 else:
     BATCH_SIZE = None
 
@@ -49,11 +51,23 @@ PREPROCESSOR_LOAD_PATH = f"trained_preprocessors/net_{str(NET)}_preprocessor.pkl
 with open(CONFIG_PATH) as f:
     config = yaml.load(f, Loader=SafeLoader)
 
+PRIOR = config['prior']
+if PRIOR:
+    prior = torch.arange(0, config['data_args']['num_pipes'])
+    prior = prior/torch.sum(prior)
+
+    DATA_PATH += "_prior"
+else:
+    prior = None
+
+
+
 save_string = f"results/net_{str(NET)}/"
 
 def main():
 
     model = torch.load(MODEL_LOAD_PATH).to("cpu")
+    model.eval()
     preprocessor = pickle.load(open(PREPROCESSOR_LOAD_PATH, "rb"))
 
     wdn = WDN(
@@ -77,6 +91,7 @@ def main():
 
             topological_distance_list = []
             correct_leak_location_list = []
+            entropy_list = []
 
             pbar = tqdm(
                 range(0, NUM_SAMPLES),
@@ -109,8 +124,8 @@ def main():
                     true_data=true_data,
                     forward_model=forward_model,
                     likelihood=likelihood,
-                    time=range(6, 9),
-                    prior=None,
+                    time=range(6, 7),
+                    prior=prior,
                     batch_size=BATCH_SIZE,
                     **config['solve_args'],
                 )
@@ -123,6 +138,9 @@ def main():
 
                 topological_distance_list.append(metrics.topological_distance)
                 correct_leak_location_list.append(metrics.is_correct)
+
+                entropy = metrics.entropy
+                entropy_list.append(entropy)
 
                 pbar.set_postfix({
                     'topological_distance': np.mean(topological_distance_list),
@@ -137,10 +155,13 @@ def main():
 
             topological_distance_list = np.array(topological_distance_list)
             correct_leak_location_list = np.array(correct_leak_location_list)
+            entropy_list = np.array(entropy_list)
             
             # Save results
-            save_string_case  = save_string \
-                + f"_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy"
+            if PRIOR:
+                save_string_case = f"_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}_prior.npy"
+            else:
+                save_string_case  = f"_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy"
             np.save(
                 f"results/net_{str(NET)}/topological_distance{save_string_case}", 
                 topological_distance_list
@@ -148,6 +169,10 @@ def main():
             np.save(
                 f"results/net_{str(NET)}/accuracy{save_string_case}",
                 correct_leak_location_list
+                )
+            np.save(
+                f"results/net_{str(NET)}/entropy{save_string_case}",
+                entropy_list
                 )
     
 if __name__ == "__main__":

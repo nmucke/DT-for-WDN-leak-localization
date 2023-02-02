@@ -30,9 +30,15 @@ class InverseProblemMetrics():
 
         self.is_correct = self._is_predicted_leak_location_correct(posterior)
 
+        self.entropy = self._get_entropy(self.posterior[-1])
+
         #self.time_topological_distance = \
         #    self._get_time_topological_distance(self.G)
 
+    def _get_entropy(self, posterior: list) -> float:
+        """Get the entropy of the posterior distribution."""
+
+        return torch.sum(- posterior * torch.log(posterior)).item()
 
     def _get_predictid_leak_location_id(self, posterior: list) -> int:
         """Get the predicted leak location id from the posterior distribution."""

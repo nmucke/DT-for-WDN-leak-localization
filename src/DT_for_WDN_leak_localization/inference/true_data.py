@@ -2,12 +2,13 @@ import torch
 from DT_for_WDN_leak_localization.inference.noise import ObservationNoise
 from DT_for_WDN_leak_localization.inference.observation import ObservationModel
 from DT_for_WDN_leak_localization.network import WDN
+from DT_for_WDN_leak_localization.preprocess import Preprocessor
 
 class TrueData():
     def __init__(
         self,
         wdn: WDN,
-        preprocessor,
+        preprocessor: Preprocessor,
         observation_model: ObservationModel,
         observation_noise: ObservationNoise,
         ):
