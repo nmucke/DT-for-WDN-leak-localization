@@ -12,7 +12,7 @@ from DT_for_WDN_leak_localization.network import WDN
 
 NUM_CPUS = 1
 
-NET = 1
+NET = 2
 WITH_LEAK = True
 TRAIN_OR_TEST = 'test'
 
@@ -36,7 +36,8 @@ epanet_data_path = f"EPANET_input_files/net_{str(NET)}.inp"
 
 WITH_PRIOR = True
 if WITH_PRIOR:
-    prior = np.arange(0,34)
+    prior = np.arange(0,119)
+    prior = np.exp(prior/10)
     prior = prior/np.sum(prior)
 
     save_data_path = \
@@ -47,6 +48,49 @@ if WITH_PRIOR:
 
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
+'''
+wn = WDN(
+    data_path=f"{DATA_PATH}/network_{str(0)}",
+)
+
+posterior = prior
+pos = {}
+for key in wn.nodes.label_to_index.keys():
+    pos[key] = nx.get_node_attributes(wn.graph, 'pos')[str(key)]
+
+# Reorder posterior list for plotting on graph
+posterior_list = [posterior[i] for i in range(len(posterior))]
+posterior_for_plot = []
+for edges in wn.graph.edges:
+    posterior_for_plot.append(posterior_list[wn.edges.label_to_index[edges[-1]]])
+    
+edge_cmap = plt.get_cmap('Reds')
+nx.draw_networkx(
+    G=wn.graph, 
+    pos=pos, 
+    edge_vmin=np.min(posterior),
+    edge_vmax=np.max(posterior),
+    edge_color=posterior_for_plot, 
+    edge_cmap=edge_cmap, 
+    width=2,
+    node_size=10, #node_color=head, node_cmap=node_cmap,
+    with_labels=False
+    )
+sm = plt.cm.ScalarMappable(
+    cmap=edge_cmap,
+    norm=plt.Normalize(vmin=np.min(posterior), vmax=np.max(posterior)))
+sm.set_array([])
+cbar = plt.colorbar(sm)
+cbar.set_label(
+    'P(c)', 
+    rotation=270, 
+    fontsize=15,
+    labelpad=20
+    )
+plt.savefig(f"figures/network_leak_prior.pdf")
+plt.show()
+pdb.set_trace()
+'''
 '''
 wn = WDN(
     data_path=f"{DATA_PATH}/network_{str(0)}",

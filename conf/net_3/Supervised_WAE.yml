@@ -3,20 +3,20 @@ train_stepper_args:
   kernel: 'multiscale'
 
 dataloader_args:
-  batch_size: 256
+  batch_size: 128
   shuffle: True
   num_workers: 4
   
 model_args:
   encoder:
     state_dim: 840
-    latent_dim: 32
-    hidden_neurons: [256, 128]
+    latent_dim: 16
+    hidden_neurons: [128, 64]
     embed_dim: 8
   decoder:
-    latent_dim: 32
+    latent_dim: 16
     state_dim: 840
-    hidden_neurons: [128, 256]
+    hidden_neurons: [64, 128]
     embed_dim: 8
     pars_dims: [444, 24]
 

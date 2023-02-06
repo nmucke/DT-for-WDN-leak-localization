@@ -19,7 +19,7 @@ torch.set_default_dtype(torch.float32)
 
 WITH_MLFLOW = False
 
-NET = 1
+NET = 3
 CONFIG_PATH = f"conf/net_{str(NET)}/Supervised_WAE.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
@@ -28,7 +28,7 @@ NUM_TRAIN_SAMPLES = 26000
 NUM_VAL_SAMPLES = 4000
 
 NUM_WORKERS = 4
-CUDA = False
+CUDA = True
 
 MODEL_SAVE_PATH = f"trained_models/net_{str(NET)}/"
 if not os.path.exists(MODEL_SAVE_PATH):

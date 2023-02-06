@@ -4,14 +4,16 @@ data_args:
   num_time_steps: 24
 
 observation_args:
-  ids_or_labels: 'labels'
-  edge_obs: ['P1022', 'P1033']
-  node_obs: ['J310', 'J211']
+  obs_case_1:
+    edge_obs: ['P1022', 'P1033']
+    node_obs: ['J91', 'J61', 'J252', 'J309', 'J291', 'J226', 'J429', 'J360', 'J1058', 'J155']
 
 noise_args:
-  noise: 0.01
+  noise: [0.005, 0.01, 0.025, 0.05, 0.1]
 
 likelihood_args:
 
+prior: False
+
 solve_args:
-  num_samples: 500
+  num_samples: 2000

@@ -16,12 +16,12 @@ observation_args:
     node_obs: ['4', '9', '32']
 
 noise_args:
-  #noise: [0.005, 0.01, 0.025, 0.05, 0.1]
-  noise: [0.025]
+  noise: [0.005, 0.01, 0.025, 0.05, 0.1]
+  #noise: [0.025]
 
 prior: False
 
 likelihood_args:
 
 solve_args:
-  num_samples: 1000
+  num_samples: 500

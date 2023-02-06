@@ -36,7 +36,7 @@ def compute_posterior_k(
             likelihood_k = likelihood.compute_likelihood(
                 state=state_pred,
                 obs=obs
-            ).detach()
+            )
             
             likelihood_mean_k.append(torch.mean(likelihood_k))
         
@@ -72,6 +72,7 @@ def solve_inverse_problem(
     time: list,
     prior: torch.Tensor = None,
     batch_size: bool = False,
+    device=torch.device("cpu"),
     ) -> torch.Tensor:
     """Solve the inverse problem"""
 
