@@ -1,0 +1,43 @@
+train_stepper_args:
+  gradient_penalty_regu: 1.
+  num_critic_steps: 3
+
+dataloader_args:
+  batch_size: 512
+  shuffle: True
+  num_workers: 4
+  
+model_args:
+  critic:
+    state_dim: 65
+    latent_dim: 8
+    hidden_neurons: [32]
+    embed_dim: 4
+    pars_dims: [34, 24]
+  generator:
+    latent_dim: 8
+    state_dim: 65
+    hidden_neurons: [32]
+    embed_dim: 4
+    pars_dims: [34, 24]
+
+optimizer_args:
+  optimizer:
+    lr: 5.0e-4
+    weight_decay: 1.0e-10
+  scheduler:
+    warmup: 10 
+    max_iters: 100
+
+data_args:
+  num_pipes: 34
+  num_nodes: 31
+  num_time_steps: 24
+  include_leak_area: False
+
+trainer_args:
+  num_epochs: 1000
+  patience: 
+
+
+

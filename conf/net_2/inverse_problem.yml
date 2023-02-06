@@ -1,0 +1,22 @@
+data_args:
+  num_pipes: 119
+  num_nodes: 97
+  num_time_steps: 24
+
+observation_args:
+  obs_case_1:
+    edge_obs: ['10', '20', '40', '50', '60', '119', '149', '116', '193', '247', '271']
+    node_obs: ['1', '2', '3', '117', '143', '193', '181', '213', '237']
+  obs_case_2:
+    edge_obs: ['10', '20', '40', '50', '60', '119', '149', '193', '247']
+    node_obs: ['1', '2', '3', '117', '143',  '181', '213']
+
+noise_args:
+  noise: [0.005, 0.01, 0.025, 0.05, 0.1]
+
+prior: False
+
+likelihood_args:
+
+solve_args:
+  num_samples: 250
