@@ -24,7 +24,7 @@ torch.set_default_dtype(torch.float32)
 torch.manual_seed(0)
 np.random.seed(0)
 
-NET = 3
+NET = 2
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
@@ -34,7 +34,7 @@ NUM_WORKERS = 30
 
 PLOT = False
 
-CUDA = False
+CUDA = True
 if CUDA:
     device = torch.device("cuda")
 else:
@@ -44,8 +44,8 @@ else:
 # Set batch size to 1 if NET == 3. This is necessary if the memory is not enough
 if NET == 3:
     BATCH_SIZE = 50
-elif NET == 2:
-    BATCH_SIZE = 250
+#elif NET == 2:
+#    BATCH_SIZE = 250
 else:
     BATCH_SIZE = None
 
@@ -74,7 +74,6 @@ save_string = f"results/net_{str(NET)}/"
 def main():
 
     model = torch.load(MODEL_LOAD_PATH).to("cpu")
-    model.to(device)
     model.eval()
     preprocessor = pickle.load(open(PREPROCESSOR_LOAD_PATH, "rb"))
 
@@ -95,6 +94,7 @@ def main():
 
             forward_model = ForwardModel(
                 generator=model.decoder,
+                device=device,
             )
 
             topological_distance_list = []

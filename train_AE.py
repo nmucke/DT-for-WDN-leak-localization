@@ -19,7 +19,7 @@ torch.set_default_dtype(torch.float32)
 
 WITH_MLFLOW = False
 
-NET = 3
+NET = 1
 CONFIG_PATH = f"conf/net_{str(NET)}/Supervised_WAE.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
