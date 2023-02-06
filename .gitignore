@@ -3,6 +3,15 @@
 # Ignore data
 data/
 
+# Ignore results
+results/
+
+# Ignore mlflow
+mlruns/
+
+# Ignore figures
+figures/
+
 # Exclude large files
 *.mp4
 *.tar
