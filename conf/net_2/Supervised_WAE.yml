@@ -11,13 +11,13 @@ model_args:
   encoder:
     state_dim: 216
     latent_dim: 16
-    hidden_neurons: [128, 64]
-    embed_dim: 8
+    hidden_neurons: [128]
+    embed_dim: 4
   decoder:
     latent_dim: 16
     state_dim: 216
-    hidden_neurons: [64, 128]
-    embed_dim: 8
+    hidden_neurons: [128]
+    embed_dim: 4
     pars_dims: [119, 24]
 
 optimizer_args:

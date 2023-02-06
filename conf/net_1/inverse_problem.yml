@@ -24,4 +24,4 @@ prior: False
 likelihood_args:
 
 solve_args:
-  num_samples: 500
+  num_samples: 5000

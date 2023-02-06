@@ -75,9 +75,17 @@ class Encoder(nn.Module):
             ) for _ in range(1)]
         )
 
+
+        self.reduce_state_embed_dim = nn.Linear(
+            in_features=embed_dim,
+            out_features=embed_dim//2,
+            bias=True
+        )
+
         self.flatten = nn.Flatten()
 
-        hidden_neurons = [state_dim*embed_dim] + hidden_neurons
+        hidden_neurons = [state_dim*(embed_dim//2)] + hidden_neurons
+        #hidden_neurons = [state_dim] + hidden_neurons
         self.dim_reduction_layers = nn.ModuleList(
             [DimReductionLayer(
                 in_features=hidden_neurons[i],
@@ -108,11 +116,16 @@ class Encoder(nn.Module):
                 num_heads=2,
                 embed_hidden_dim=embed_dim,
                 p=0.1
-            ) for _ in range(2)]
+            ) for _ in range(1)]
+        )
+        self.reduce_latent_embed_dim = nn.Linear(
+            in_features=embed_dim,
+            out_features=embed_dim//2,
+            bias=True
         )
 
         self.final_layer = nn.Linear(
-            in_features=embed_dim*latent_dim,
+            in_features=latent_dim*(embed_dim//2),
             out_features=latent_dim
         )
     
@@ -128,6 +141,7 @@ class Encoder(nn.Module):
         for layer in self.initial_transformer_layers:
             states = layer(states)
 
+        states = self.reduce_state_embed_dim(states)
         latent_state = self.flatten(states)
 
         for layer in self.dim_reduction_layers:
@@ -142,6 +156,7 @@ class Encoder(nn.Module):
         for layer in self.final_state_transformer_layers:
             latent_state = layer(latent_state)
 
+        latent_state = self.reduce_latent_embed_dim(latent_state)
         latent_state = self.flatten(latent_state)
         latent_state = self.final_layer(latent_state)
 

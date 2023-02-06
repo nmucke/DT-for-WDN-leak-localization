@@ -7,7 +7,7 @@ from DT_for_WDN_leak_localization.inference.forward_model import BaseForwardMode
 from DT_for_WDN_leak_localization.inference.likelihood import Likelihood
 from DT_for_WDN_leak_localization.inference.true_data import TrueData
 
-@ray.remote
+#@ray.remote(num_gpus=1)
 def compute_posterior_k(
     forward_model: BaseForwardModel,
     likelihood: Likelihood,
@@ -17,6 +17,7 @@ def compute_posterior_k(
     leak_location: int,
     t_idx: int,
     batch_size: int = None,
+    device=torch.device("cpu"),
 ):
 
 
@@ -28,9 +29,11 @@ def compute_posterior_k(
             # Compute ensemble of states
             state_pred = forward_model(
                 num_samples=batch_size, 
-                leak_location=torch.tensor([leak_location]), 
-                time=torch.tensor([t_idx])
-            ).detach()
+                leak_location=torch.tensor([leak_location], device=device), 
+                time=torch.tensor([t_idx], device=device)
+            )
+
+            state_pred = state_pred.detach().to('cpu')
 
             # Likelihood of each sample
             likelihood_k = likelihood.compute_likelihood(
@@ -47,10 +50,11 @@ def compute_posterior_k(
         # Compute ensemble of states
         state_pred = forward_model(
             num_samples=num_samples, 
-            leak_location=torch.tensor([leak_location]), 
-            time=torch.tensor([t_idx])
-            ).detach()
+            leak_location=torch.tensor([leak_location], device=device), 
+            time=torch.tensor([t_idx], device=device)
+            )
 
+        state_pred = state_pred.detach().to('cpu')
         # Likelihood of each sample
         likelihood_k = likelihood.compute_likelihood(
             state=state_pred,
@@ -79,12 +83,14 @@ def solve_inverse_problem(
     if prior is None:
         prior = torch.ones(len(true_data.wdn.edges.ids)) / len(true_data.wdn.edges.ids)
 
+    forward_model = forward_model.to(device)
+
     posterior_list = []
     for t_idx in time:
         posterior_k = []
         for leak_location in true_data.wdn.edges.ids:
 
-            posterior_k.append(compute_posterior_k.remote(
+            posterior_k.append(compute_posterior_k(#).remote(
                 forward_model=forward_model,
                 likelihood=likelihood,
                 obs=true_data.obs[0, t_idx],
@@ -93,9 +99,11 @@ def solve_inverse_problem(
                 leak_location=leak_location,
                 t_idx=t_idx,
                 batch_size=batch_size,
+                device=device
             ))
 
-        posterior_k = torch.stack(ray.get(posterior_k))
+        #posterior_k = torch.stack(ray.get(posterior_k))
+        posterior_k = torch.stack(posterior_k)
 
         posterior_k = posterior_k / torch.sum(posterior_k)
 
