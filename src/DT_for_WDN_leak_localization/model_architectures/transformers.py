@@ -11,11 +11,11 @@ import torch.nn.functional as F
 
 
 class PositionalEmbedding(nn.Module):
-    def __init__(self, dim, max_len=1000):
+    def __init__(self, embed_dim, seq_len=1000):
         super().__init__()
-        pe = torch.zeros(max_len, dim)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, dim, 2).float() * (-math.log(10000.0) / dim))
+        pe = torch.zeros(seq_len, embed_dim)
+        position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, embed_dim, 2).float() * (-math.log(10000.0) / embed_dim))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
@@ -37,6 +37,7 @@ class MultiHeadAttention(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
         # Embedding dimension of model is a multiple of number of heads
+
         assert d_model % self.num_heads == 0
         self.d_k = d_model // self.num_heads
 
@@ -88,7 +89,7 @@ class MultiHeadAttention(nn.Module):
         return H, A
 
 
-class EmbedCNN(nn.Module):
+class FeedForward(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim):
         super().__init__()
         self.k1convL1 = nn.Linear(input_dim, hidden_dim)
@@ -101,34 +102,11 @@ class EmbedCNN(nn.Module):
         x = self.k1convL2(x)
         return x
 
-class CNN(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_dim):
-        super().__init__()
-        self.k1convL1 = nn.Conv1d(
-            input_dim,
-            hidden_dim,
-            kernel_size=1
-        )
-        self.k1convL2 = nn.Conv1d(
-            hidden_dim,
-            output_dim,
-            kernel_size=1
-        )
-        self.activation = nn.GELU()
-
-    def forward(self, x):
-        x = self.k1convL1(x)
-        x = self.activation(x)
-        x = self.k1convL2(x)
-        return x
 
 class EncoderLayer(nn.Module):
     def __init__(
             self,
-            input_dim,
-            output_dim,
-            input_embed_dim,
-            output_embed_dim,
+            embed_dim,
             num_heads,
             embed_hidden_dim,
             p=0.1
@@ -137,43 +115,30 @@ class EncoderLayer(nn.Module):
 
         self.activation = nn.GELU()
 
-        self.mha = MultiHeadAttention(input_embed_dim, num_heads, p)
-        self.embed_cnn = EmbedCNN(
-            input_dim=input_embed_dim,
-            output_dim=output_embed_dim,
+        self.mha = MultiHeadAttention(embed_dim, num_heads, p)
+
+        self.feed_forward = FeedForward(
+            input_dim=embed_dim,
+            output_dim=embed_dim,
             hidden_dim=embed_hidden_dim
         )
 
-        self.cnn = CNN(
-            input_dim=input_dim,
-            output_dim=output_dim,
-            hidden_dim=output_dim
-        )
-
-        self.layernorm1 = nn.LayerNorm(normalized_shape=input_embed_dim, eps=1e-6)
-        self.layernorm2 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
-        self.layernorm3 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
+        self.layernorm1 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
+        self.layernorm2 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
 
     def forward(self, x):
-        # Multi-head attention
-        attn_output, _ = self.mha(X_q=x, X_k=x, X_v=x)  # (batch_size, input_seq_len, input_embed_dim)
 
-        # Layer norm after adding the residual connection
-        x = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, input_embed_dim)
+        # Multi-head attention
+        attn_output, _ = self.mha(X_q=x, X_k=x, X_v=x)  # (batch_size, seq_len, embed_dim)
+
+        x = self.layernorm1(x + attn_output) # (batch_size, seq_len, embed_dim)
 
         # Compute accross embedding dimension
-        x = self.embed_cnn(x)  # (batch_size, input_seq_len, output_embed_dim)
+        x_ff = self.feed_forward(x)  # (batch_size, seq_len, embed_dim)
 
-        x = self.activation(x)
+        x_ff = self.activation(x_ff)
 
-        x = self.layernorm2(x)
-
-        # Compute accross sequence dimension
-        x = self.cnn(x)  # (batch_size, output_seq_len, output_embed_dim)
-
-        x = self.activation(x)
-
-        x = self.layernorm3(x)
+        x = self.layernorm2(x + x_ff)
 
         return x
 
@@ -181,10 +146,7 @@ class EncoderLayer(nn.Module):
 class DecoderLayer(nn.Module):
     def __init__(
             self,
-            input_dim,
-            output_dim,
-            input_embed_dim,
-            output_embed_dim,
+            embed_dim,
             num_heads,
             embed_hidden_dim,
             p=0.1
@@ -193,52 +155,37 @@ class DecoderLayer(nn.Module):
 
         self.activation = nn.GELU()
 
-        self.mha = MultiHeadAttention(input_embed_dim, num_heads, p)
-        self.embed_cnn = EmbedCNN(
-            input_dim=input_embed_dim,
-            output_dim=output_embed_dim,
+        self.mha = MultiHeadAttention(embed_dim, num_heads, p)
+
+        self.feed_forward = FeedForward(
+            input_dim=embed_dim,
+            output_dim=embed_dim,
             hidden_dim=embed_hidden_dim
         )
 
-        self.cnn = CNN(
-            input_dim=input_dim,
-            output_dim=output_dim,
-            hidden_dim=output_dim
-        )
-
-        self.layernorm1 = nn.LayerNorm(normalized_shape=input_embed_dim, eps=1e-6)
-        self.layernorm2 = nn.LayerNorm(normalized_shape=input_embed_dim, eps=1e-6)
-        self.layernorm3 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
-        self.layernorm4 = nn.LayerNorm(normalized_shape=output_embed_dim, eps=1e-6)
+        self.layernorm1 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
+        self.layernorm2 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
+        self.layernorm3 = nn.LayerNorm(normalized_shape=embed_dim, eps=1e-6)
 
     def forward(self, x, encoder_output):
 
         # Multi-head self attention
-        attn_output, _ = self.mha(X_q=x, X_k=x, X_v=x)  # (batch_size, input_seq_len, input_embed_dim)
+        attn_output, _ = self.mha(X_q=x, X_k=x, X_v=x)  # (batch_size, seq_len, embed_dim)
 
         # Layer norm after adding the residual connection
-        x = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, input_embed_dim)
+        x = self.layernorm1(x + attn_output)  # (batch_size, seq_len, embed_dim)
 
         # Multi-head cross attention
-        attn_output, _ = self.mha(X_q=x, X_k=encoder_output, X_v=encoder_output)  # (batch_size, input_seq_len, input_embed_dim)
+        attn_output, _ = self.mha(X_q=x, X_k=encoder_output, X_v=encoder_output)  # (batch_size, seq_len, embed_dim)
 
         # Layer norm after adding the residual connection
-        x = self.layernorm2(x + attn_output)  # (batch_size, input_seq_len, input_embed_dim)
+        x = self.layernorm2(x + attn_output)  # (batch_size, eq_len, embed_dim)
 
         # Compute accross embedding dimension
-        x = self.embed_cnn(x)  # (batch_size, input_seq_len, output_embed_dim)
+        x_ff = self.feed_forward(x)  # (batch_size, seq_len, embed_dim)
 
-        x = self.activation(x)
-
-        x = self.layernorm3(x)
-
-        # Compute accross sequence dimension
-        x = self.cnn(x)  # (batch_size, output_seq_len, output_embed_dim)
-
-        x = self.activation(x)
-
-        x = self.layernorm4(x)
-
+        # Layer norm after adding the residual connection
+        x = self.layernorm3(x + x_ff)
         return x
 
 def normal_init(m, mean, std):
@@ -250,166 +197,3 @@ def normal_init(m, mean, std):
         m.weight.data.fill_(1)
         if m.bias.data is not None:
             m.bias.data.zero_()
-
-
-
-class Encoder(nn.Module):
-    def __init__(
-            self,
-            latent_dim=32,
-            state_dim=128,
-            embed_dims=[],
-            hidden_neurons=[],
-    ):
-        super().__init__()
-
-        self.hidden_neurons = [state_dim] + hidden_neurons
-        self.latent_dim = latent_dim
-        self.state_dim = state_dim
-        self.embed_dims = embed_dims
-
-
-        self.input_layer = nn.Linear(1, self.embed_dims[0])
-
-        self.positional_embedding = PositionalEmbedding(
-            dim= self.embed_dims[0]
-        )
-
-        self.encoder_layers = nn.ModuleList([
-            EncoderLayer(
-                input_dim=self.hidden_neurons[i],
-                output_dim=self.hidden_neurons[i+1],
-                input_embed_dim=self.embed_dims[i],
-                output_embed_dim=self.embed_dims[i+1],
-                num_heads=4,
-                embed_hidden_dim=embed_dims[i],
-            ) for i in range(len(self.hidden_neurons)-1)
-        ])
-
-        self.output_layer_1 = nn.Linear(
-                self.embed_dims[-1]*self.hidden_neurons[-1],
-                self.latent_dim
-        )
-
-        self.flatten = nn.Flatten()
-    def forward(self, x):
-
-        x = x.unsqueeze(-1)
-        x = self.input_layer(x)
-
-        x = self.positional_embedding(x)
-
-        for layer in self.encoder_layers:
-            x = layer(x)
-
-        x = self.flatten(x)
-
-        x = self.output_layer_1(x)
-        return x
-
-
-class SupervisedDecoder(nn.Module):
-    def __init__(
-            self,
-            latent_dim=32,
-            state_dim=128,
-            embed_dims=[],
-            hidden_neurons=[],
-            pars_dim=(119),
-    ):
-        super().__init__()
-
-        pars_hidden_neurons = [latent_dim//2] + hidden_neurons
-        pars_embed_dims = [embed_dims[0]//2] + embed_dims
-
-        self.hidden_neurons = [latent_dim] + hidden_neurons
-        self.latent_dim = latent_dim
-        self.pars_dim = pars_dim
-        self.state_dim = state_dim
-
-        self.embed_dims = embed_dims
-
-        if len(pars_dim) == 1:
-            pars_embedding_dim = [latent_dim]
-        elif len(pars_dim) == 2:
-            pars_embedding_dim = [latent_dim, latent_dim]
-
-        total_pars_embedding_dim = sum(pars_embedding_dim)
-
-        self.pars_embedding_layers = nn.ModuleList()
-        for i in range(len(self.pars_dim)):
-            self.pars_embedding_layers.append(
-                nn.Embedding(
-                    num_embeddings=pars_dim[i],
-                    embedding_dim=pars_embedding_dim[i]
-                )
-            )
-
-        self.pars_layer_in = nn.Linear(
-                in_features=total_pars_embedding_dim,
-                out_features=(self.hidden_neurons[0] * self.embed_dims[0])//2
-        )
-
-        self.input_layer = nn.Linear(1, self.embed_dims[0])
-
-
-        self.positional_embedding = PositionalEmbedding(
-            dim=self.embed_dims[0]
-        )
-
-        self.pars_encoder_layers = nn.ModuleList([
-            EncoderLayer(
-                input_dim=pars_hidden_neurons[i],
-                output_dim=pars_hidden_neurons[i+1],
-                input_embed_dim=pars_embed_dims[i],
-                output_embed_dim=pars_embed_dims[i+1],
-                num_heads=4,
-                embed_hidden_dim=pars_embed_dims[i],
-            ) for i in range(len(pars_hidden_neurons)-1)
-        ])
-
-        self.decoder_layers = nn.ModuleList([
-            DecoderLayer(
-                input_dim=self.hidden_neurons[i],
-                output_dim=self.hidden_neurons[i+1],
-                input_embed_dim=self.embed_dims[i],
-                output_embed_dim=self.embed_dims[i+1],
-                num_heads=4,
-                embed_hidden_dim=embed_dims[i],
-            ) for i in range(len(self.hidden_neurons)-1)
-        ])
-
-
-        self.flatten = nn.Flatten()
-
-        self.output_layer_1 = nn.Linear(
-                self.embed_dims[-1]*self.hidden_neurons[-1],
-                self.state_dim
-        )
-
-
-    def forward(self, x, pars):
-
-
-        pars = [emb_layer(pars[:, i])
-            for i, emb_layer in enumerate(self.pars_embedding_layers)]
-        pars = torch.cat(pars, 1)
-
-        pars = self.pars_layer_in(pars)
-        pars = pars.view(-1, self.hidden_neurons[0]//2, self.embed_dims[0]//2)
-
-        x = x.unsqueeze(-1)
-        x = self.input_layer(x)
-
-        x = self.positional_embedding(x)
-
-        for layer, pars_layer in zip(self.decoder_layers, self.pars_encoder_layers):
-            pars = pars_layer(pars)
-
-            x = layer(x, pars)
-
-        x = self.flatten(x)
-        x = self.output_layer_1(x)
-
-        return x
-
