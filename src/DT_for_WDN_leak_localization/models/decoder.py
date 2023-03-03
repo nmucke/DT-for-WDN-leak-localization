@@ -57,7 +57,7 @@ class Decoder(nn.Module):
             embed_dim=embed_dim,
             seq_len=latent_dim,
             pars_dims=pars_dims,
-            num_layers=1,
+            num_layers=2,
             transformer=True
         )
 
@@ -81,18 +81,21 @@ class Decoder(nn.Module):
                 num_heads=2,
                 embed_hidden_dim=embed_dim,
                 p=0.1
-            ) for _ in range(1)]
+            ) for _ in range(2)]
         )
 
+        '''
         self.reduce_latent_embed_dim = nn.Linear(
             in_features=embed_dim,
             out_features=embed_dim//2,
             bias=True
         )
+        '''
 
         self.flatten = nn.Flatten()
 
-        hidden_neurons = [latent_dim*(embed_dim//2)] + hidden_neurons
+        hidden_neurons = [latent_dim*embed_dim] + hidden_neurons
+        #hidden_neurons = [latent_dim*(embed_dim//2)] + hidden_neuronsneurons
         #hidden_neurons = [latent_dim] + hidden_neurons
         self.dim_increase_layers = nn.ModuleList(
             [DimIncreaseLayer(
@@ -135,18 +138,61 @@ class Decoder(nn.Module):
             ) for _ in range(1)]
         )
 
+        '''
         self.reduce_state_embed_dim = nn.Linear(
             in_features=embed_dim,
             out_features=embed_dim//2,
             bias=True
         )
+        '''
 
 
         self.final_layer = nn.Linear(
-            in_features=state_dim*(embed_dim//2),
+            in_features=state_dim*embed_dim,#(embed_dim//2),
             out_features=state_dim
         )
+
+    def pars_forward(self, pars: torch.Tensor) -> torch.Tensor:
+
+        pars_attn_1 = self.initial_pars_encoder(pars)
+        pars_attn_2 = self.final_pars_encoder(pars)
+
+        return pars_attn_1, pars_attn_2
     
+    def state_forward(
+        self, 
+        latent_state: torch.Tensor,
+        pars_attn_1: torch.Tensor,
+        pars_attn_2: torch.Tensor
+        ) -> torch.Tensor:
+
+        latent_state = self.initial_state_encoder(latent_state)
+
+        latent_state = self.initial_positional_embedding(latent_state)
+        for layer in self.initial_transformer_layers:
+            latent_state = layer(latent_state, pars_attn_1)
+
+        #latent_state = self.reduce_latent_embed_dim(latent_state)
+        latent_state = self.flatten(latent_state)
+
+        for layer in self.dim_increase_layers:
+            latent_state = layer(latent_state)
+
+        latent_state = self.final_dim_increase_layer(latent_state)
+
+        latent_state = self.unflatten(latent_state)
+        latent_state = self.final_embed_dim_increase(latent_state)
+        latent_state = self.final_positional_embedding(latent_state)
+
+        for layer in self.final_transformer_layers:
+            latent_state = layer(latent_state, pars_attn_2)
+
+        #latent_state = self.reduce_state_embed_dim(latent_state)
+        latent_state = self.flatten(latent_state)
+        latent_state = self.final_layer(latent_state)
+
+        return latent_state
+
     def forward(
         self, 
         latent_state: torch.Tensor, 
@@ -161,7 +207,7 @@ class Decoder(nn.Module):
         for layer in self.initial_transformer_layers:
             latent_state = layer(latent_state, pars_attn)
 
-        latent_state = self.reduce_latent_embed_dim(latent_state)
+        #latent_state = self.reduce_latent_embed_dim(latent_state)
         latent_state = self.flatten(latent_state)
 
         for layer in self.dim_increase_layers:
@@ -177,7 +223,7 @@ class Decoder(nn.Module):
         for layer in self.final_transformer_layers:
             latent_state = layer(latent_state, pars_attn)
 
-        latent_state = self.reduce_state_embed_dim(latent_state)
+        #latent_state = self.reduce_state_embed_dim(latent_state)
         latent_state = self.flatten(latent_state)
         latent_state = self.final_layer(latent_state)
 

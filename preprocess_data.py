@@ -14,9 +14,9 @@ from DT_for_WDN_leak_localization.network import WDN
 
 torch.set_default_dtype(torch.float32)
 
-NET = 3
+NET = 4
 NUM_SAMPLES = 30000
-BATCH_SIZE = 10
+BATCH_SIZE = 100
 
 TEST_OR_TRAIN = 'train'
 
@@ -24,6 +24,7 @@ PARS_DIM = 3
 
 DATA_CONFIG_PATH = f"conf/net_{str(NET)}/data_preprocessing.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/train_data/network_"
+#DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data/network_"
 
 with open(DATA_CONFIG_PATH) as f:
     params = yaml.load(f, Loader=SafeLoader)
@@ -87,6 +88,13 @@ class NetworkDataset(torch.utils.data.Dataset):
 
         return self.get_state_tensor(wdn), self.get_pars_tensor(wdn)
 
+'''
+for i in range(0, 50000):
+    wdn = WDN(DATA_PATH + str(i))
+    if wdn.edges.flow_rate.shape[0] != 25:
+        print(i)
+pdb.set_trace()
+'''
 
 def main():
 

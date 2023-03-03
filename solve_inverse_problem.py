@@ -8,12 +8,15 @@ import pdb
 import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import wntr
+import networkx as nx
 
 from DT_for_WDN_leak_localization.inference.forward_model import ForwardModel
 from DT_for_WDN_leak_localization.inference.likelihood import Likelihood
 from DT_for_WDN_leak_localization.inference.metrics import InverseProblemMetrics
 from DT_for_WDN_leak_localization.inference.noise import ObservationNoise
 from DT_for_WDN_leak_localization.inference.observation import ObservationModel
+from DT_for_WDN_leak_localization.inference.prior import get_prior
 from DT_for_WDN_leak_localization.inference.solve import solve_inverse_problem
 from DT_for_WDN_leak_localization.inference.true_data import TrueData
 from DT_for_WDN_leak_localization.network import WDN
@@ -24,13 +27,13 @@ torch.set_default_dtype(torch.float32)
 torch.manual_seed(0)
 np.random.seed(0)
 
-NET = 2
+NET = 4
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
 NUM_SAMPLES = 50
 
-NUM_WORKERS = 30
+NUM_WORKERS = 32
 
 PLOT = False
 
@@ -43,9 +46,11 @@ else:
 
 # Set batch size to 1 if NET == 3. This is necessary if the memory is not enough
 if NET == 3:
-    BATCH_SIZE = 50
-#elif NET == 2:
-#    BATCH_SIZE = 250
+    BATCH_SIZE = 500
+elif NET == 2:
+    BATCH_SIZE = 1000
+elif NET == 4:
+    BATCH_SIZE = 1000
 else:
     BATCH_SIZE = None
 
@@ -60,14 +65,12 @@ with open(CONFIG_PATH) as f:
 
 PRIOR = config['prior']
 if PRIOR:
-    prior = torch.arange(0, config['data_args']['num_pipes'])
-    prior = prior/torch.sum(prior)
+    prior = get_prior(net=NET, data_path=DATA_PATH)
+    prior = torch.tensor(prior, dtype=torch.float32)
 
     DATA_PATH += "_prior"
 else:
     prior = None
-
-
 
 save_string = f"results/net_{str(NET)}/"
 
@@ -119,6 +122,33 @@ def main():
                     observation_model=observation_model,
                     observation_noise=observation_noise,
                 )
+                '''
+                epanet_data_path = f"EPANET_input_files/net_{str(NET)}.inp"
+
+                wn = wntr.network.WaterNetworkModel(epanet_data_path)
+                pos = {}
+                for key in wdn.nodes.label_to_index.keys():
+                    pos[key] = nx.get_node_attributes(wdn.graph, 'pos')[str(key)]
+
+                nx.draw_networkx(
+                    G=wdn.graph, 
+                    pos=pos, 
+                    width=0.2,
+                    node_size=100,
+                    node_color=wdn.nodes.head.iloc()[0],
+                    with_labels=False,
+                    arrows=False,
+                    )
+                for edges in wdn.graph.edges:
+                    if edges[-1] == wdn.leak.pipe_label:
+                        nx.draw_networkx_edge_labels(
+                            G=wdn.graph, pos=pos,
+                            edge_labels={(edges[0], edges[1]): 'X'},
+                            font_color='tab:red', font_size=25,
+                            bbox={'alpha':0.0})
+                plt.show()
+                pdb.set_trace()
+                '''
 
                 # Set up likelihood
                 likelihood = Likelihood(
@@ -132,7 +162,7 @@ def main():
                     true_data=true_data,
                     forward_model=forward_model,
                     likelihood=likelihood,
-                    time=range(6, 7),
+                    time=range(6, 17),
                     prior=prior,
                     batch_size=BATCH_SIZE,
                     device=device,
@@ -150,6 +180,8 @@ def main():
 
                 entropy = metrics.entropy
                 entropy_list.append(entropy)
+
+                #time_topological_distance_list.append(metrics.time_topological_distance)
 
                 pbar.set_postfix({
                     'topological_distance': np.mean(topological_distance_list),
@@ -185,7 +217,7 @@ def main():
                 )
     
 if __name__ == "__main__":
-    ray.shutdown()
-    ray.init(num_cpus=NUM_WORKERS)
+    #ray.shutdown()
+    #ray.init(num_cpus=NUM_WORKERS)
     main()
-    ray.shutdown()
+    #ray.shutdown()

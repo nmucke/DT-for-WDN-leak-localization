@@ -32,6 +32,8 @@ class ForwardModel(BaseForwardModel):
         self.generator = generator
         self.latent_dim = generator.latent_dim
         self.device = device
+
+        self.pars_init = False
     
     def _sample_latent(
         self,
@@ -46,11 +48,25 @@ class ForwardModel(BaseForwardModel):
         time: torch.Tensor,
         ):
 
-        pars = torch.cat([leak_location, time], dim=0)
-        pars = pars.unsqueeze(0).repeat(num_samples, 1)
-
         latent_samples = self._sample_latent(
             shape=(num_samples, self.latent_dim)
         )
 
-        return self.generator(latent_samples, pars)
+        if not self.pars_init:
+
+            pars = torch.cat([leak_location, time], dim=0)
+            #pars = pars.unsqueeze(0).repeat(num_samples, 1)
+            pars = pars.unsqueeze(0)
+
+            pars_1, pars_2 = self.generator.pars_forward(pars)
+
+            self.pars_1 = pars_1.repeat(num_samples, 1, 1)
+            self.pars_2 = pars_2.repeat(num_samples, 1, 1)
+
+            self.pars_init = True
+
+        return self.generator.state_forward(
+            latent_samples, 
+            pars_attn_1=self.pars_1,
+            pars_attn_2=self.pars_2,
+            )

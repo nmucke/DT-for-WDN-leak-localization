@@ -19,6 +19,9 @@ class ObservationModel(nn.Module):
         self.num_edges = len(self.wdn.edges.ids)
         self.num_nodes = len(self.wdn.nodes.ids)
 
+        #edge_obs = self.wdn.edges.labels[0::5]
+        #node_obs = self.wdn.nodes.labels[0::5]
+
         if ids_or_labels == 'labels':
             self._prepare_observation_ids(
                 edge_obs_labels=edge_obs,

@@ -25,13 +25,14 @@ def get_demand_time_series_noise(t_start, t_end, t_step, base_value):
     return demand_noise
 
 
-@ray.remote(num_returns=1)
+#@ray.remote(num_returns=1)
 def simulate_WDN(
     inp_file, 
     leak=None, 
     data_save_path=None, 
     total_inflow_based_demand=False,
-    id=0
+    demand_scaler=None,
+    id=0,
     ):
 
 
@@ -59,10 +60,13 @@ def simulate_WDN(
             4.5846, 4.0725, 4.0539, 4.0444, 3.8519, 3.7347, 3.7883, 3.7886,
             3.3522, 3.1466, 3.0435, 3.0730, 3.4929, 3.2028, 2.7843, 2.4205
             ]
+        if demand_scaler is not None:
+            total_inflow = [i*demand_scaler for i in total_inflow]
         total_inflow_with_noise = \
             total_inflow + \
             0.1*np.random.normal(0, 1, len(total_inflow)) * \
             total_inflow
+        
 
         total_base_demand = base_demands.sum()
         demand_fraction = base_demands/total_base_demand
@@ -107,7 +111,7 @@ def simulate_WDN(
         
         leak_node.add_leak(wn_leak, area=leak_area, start_time=leak_start_time)
 
-        wn_leak.options.hydraulic.demand_model = 'DDA'
+        #wn_leak.options.hydraulic.demand_model = 'PDA'
 
         sim = wntr.sim.WNTRSimulator(wn_leak)
     else:
@@ -132,6 +136,34 @@ def simulate_WDN(
     if leak is not None:
         flowrate_df = results.link['flowrate'].drop('leak_pipe', axis=1)
         leak['start_time'] = leak_start_time
+    
+    pos = {}
+    for key in G.nodes:
+        pos[key] = nx.get_node_attributes(G, 'pos')[str(key)]
+    nx.draw_networkx(
+        G=G, 
+        pos=pos, 
+        width=0.2,
+        node_size=100,
+        node_color=head_df.iloc()[8, :],
+        with_labels=False,
+        arrows=False,
+        )
+    for edges in G.edges:
+        if edges[-1] == leak['pipe']:
+            nx.draw_networkx_edge_labels(
+                G=G, pos=pos,
+                edge_labels={(edges[0], edges[1]): 'X'},
+                font_color='tab:red', font_size=25,
+                bbox={'alpha':0.0})
+
+    sm = plt.cm.ScalarMappable(
+        norm=plt.Normalize(vmin=np.min(head_df.iloc()[0, :]), vmax=np.max(head_df.iloc()[0, :]))
+        )
+    sm.set_array([])
+    cbar = plt.colorbar(sm)
+    plt.show()
+    pdb.set_trace()
 
     if leak is not None:
         result_dict = {

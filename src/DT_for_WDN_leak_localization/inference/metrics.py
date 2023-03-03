@@ -32,8 +32,8 @@ class InverseProblemMetrics():
 
         self.entropy = self._get_entropy(self.posterior[-1])
 
-        #self.time_topological_distance = \
-        #    self._get_time_topological_distance(self.G)
+        self.time_topological_distance = \
+            self._get_time_topological_distance()
 
     def _get_entropy(self, posterior: list) -> float:
         """Get the entropy of the posterior distribution."""
@@ -59,7 +59,6 @@ class InverseProblemMetrics():
     
     def _get_time_topological_distance(
         self, 
-        G: nx.DiGraph,
         ) -> int:
         """Get the topological distance between the true leak location 
         and the predicted leak location for all time steps."""
@@ -67,8 +66,8 @@ class InverseProblemMetrics():
         time_topological_distance = []
         for posterior_t in self.posterior:
             top_dist = self._get_topological_distance(
-                G, 
-                 torch.argmax(posterior_t).item(),
+                self.G, 
+                self.true_data.wdn.edges.index_to_label[torch.argmax(posterior_t).item()],
                 )
             
             time_topological_distance.append(top_dist)            

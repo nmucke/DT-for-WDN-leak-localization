@@ -5,9 +5,16 @@ data_args:
 
 observation_args:
   obs_case_1:
-    edge_obs: ['P1022', 'P1033']
-    node_obs: ['J91', 'J61', 'J252', 'J309', 'J291', 'J226', 'J429', 'J360', 'J1058', 'J155']
-
+    edge_obs: [
+      'P977', 'P866', 'P500', 'P402', 'P381', 'P130', 'P294', 'P249', 'P962', 'P97',
+      'P15', 'P215', 'P787', 'P347', 'P1044', 'P144', 'P752', 'P316',
+      'v1', 'V45', 'V47', 'V2'
+      ]
+    node_obs: [
+      'J91', 'J61', 'J252', 'J309', 'J291', 'J226', 'J429', 'J360', 'J1058', 'J155',
+      'T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7',
+      ]
+    
 noise_args:
   noise: [0.005, 0.01, 0.025, 0.05, 0.1]
 
@@ -16,4 +23,4 @@ likelihood_args:
 prior: False
 
 solve_args:
-  num_samples: 2000
+  num_samples: 40000
