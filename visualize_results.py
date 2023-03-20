@@ -6,18 +6,21 @@ import yaml
 from yaml.loader import SafeLoader
 import pdb
 import os
+import matplotlib
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from scipy.stats import gaussian_kde
 
+matplotlib.rcParams.update({'font.size': 16})
+
 
 torch.set_default_dtype(torch.float32)
 
-NET = 4
+NET = 1
 
 PRIOR = True
 
-NUM_SAMPLES = 50
+NUM_SAMPLES = 100
 
 RESULT_PATH = f"results/net_{str(NET)}"
 
@@ -188,6 +191,9 @@ def main():
     plt.ylabel("Probability")
     plt.grid()
     plt.legend()
+
+    print(f"True entropy mean: {np.mean(true_entropy_list)}")
+    print(f"False entropy mean: {np.mean(false_entropy_list)}")
     
     if PRIOR:
         plt.savefig(f"figures/net_{str(NET)}/entropy_hist_prior.pdf")

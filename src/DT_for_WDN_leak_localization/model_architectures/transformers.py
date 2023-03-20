@@ -1,13 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import torch.nn as nn
-import torch.optim as optim
 import torch
 import pdb
-from torch.nn.utils import spectral_norm
-import time
 import math
 import torch.nn.functional as F
+#from flash_attn.flash_attention import FlashMHA
 
 
 class PositionalEmbedding(nn.Module):

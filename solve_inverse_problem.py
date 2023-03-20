@@ -27,7 +27,7 @@ torch.set_default_dtype(torch.float32)
 torch.manual_seed(0)
 np.random.seed(0)
 
-NET = 4
+NET = 1
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
@@ -35,9 +35,11 @@ NUM_SAMPLES = 50
 
 NUM_WORKERS = 32
 
+DENSE = True
+
 PLOT = False
 
-CUDA = True
+CUDA = False
 if CUDA:
     device = torch.device("cuda")
 else:
@@ -55,7 +57,11 @@ else:
     BATCH_SIZE = None
 
 MODEL_LOAD_PATH = f"trained_models/net_{str(NET)}/"
-MODEL_LOAD_NAME = f"Supervised_WAE_net_{str(NET)}.pt"
+
+if DENSE:
+    MODEL_LOAD_NAME = f"dense_Supervised_WAE_net_{str(NET)}.pt"
+else:
+    MODEL_LOAD_NAME = f"Supervised_WAE_net_{str(NET)}.pt"
 MODEL_LOAD_PATH = os.path.join(MODEL_LOAD_PATH, MODEL_LOAD_NAME)
 
 PREPROCESSOR_LOAD_PATH = f"trained_preprocessors/net_{str(NET)}_preprocessor.pkl"
@@ -72,13 +78,20 @@ if PRIOR:
 else:
     prior = None
 
-save_string = f"results/net_{str(NET)}/"
+if DENSE:
+    save_string = f"results/dense/net_{str(NET)}/"
+else:
+    save_string = f"results/net_{str(NET)}/"
 
 def main():
 
     model = torch.load(MODEL_LOAD_PATH).to("cpu")
     model.eval()
     preprocessor = pickle.load(open(PREPROCESSOR_LOAD_PATH, "rb"))
+
+    #pytorch_total_params = sum(p.numel() for p in model.parameters())
+    #print(f"Number of parameters: {pytorch_total_params}")
+    #pdb.set_trace()
 
     wdn = WDN(
         data_path=f"{DATA_PATH}/network_0",
@@ -203,6 +216,7 @@ def main():
                 save_string_case = f"_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}_prior.npy"
             else:
                 save_string_case  = f"_noise_{noise}_sensors_{len(config['observation_args'][obs_case_key]['edge_obs'])}.npy"
+
             np.save(
                 f"results/net_{str(NET)}/topological_distance{save_string_case}", 
                 topological_distance_list

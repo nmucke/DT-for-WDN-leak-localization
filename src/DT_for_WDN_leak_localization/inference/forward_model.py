@@ -56,12 +56,22 @@ class ForwardModel(BaseForwardModel):
 
             pars = torch.cat([leak_location, time], dim=0)
             #pars = pars.unsqueeze(0).repeat(num_samples, 1)
-            pars = pars.unsqueeze(0)
 
-            pars_1, pars_2 = self.generator.pars_forward(pars)
+            if self.generator.transformer:
+                pars = pars.unsqueeze(0)
 
-            self.pars_1 = pars_1.repeat(num_samples, 1, 1)
-            self.pars_2 = pars_2.repeat(num_samples, 1, 1)
+                pars_1, pars_2 = self.generator.pars_forward(pars)
+
+                self.pars_1 = pars_1.repeat(num_samples, 1, 1)
+                self.pars_2 = pars_2.repeat(num_samples, 1, 1)
+            
+            else:
+                pars = pars.unsqueeze(0)
+
+                pars_1, pars_2 = self.generator.pars_forward(pars)
+
+                self.pars_1 = pars_1.repeat(num_samples, 1)
+                self.pars_2 = pars_2.repeat(num_samples, 1)
 
             self.pars_init = True
 

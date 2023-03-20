@@ -32,6 +32,34 @@ def get_activation_function(activation_function_name: str = 'leaky_relu'):
 
     return activation_function
 
+class DenseResNetLayer(nn.Module):
+    
+        def __init__(
+            self,
+            in_features: int,
+            out_features: int,
+            ):
+            super().__init__()
+    
+            self.in_features = in_features
+            self.out_features = out_features
+    
+            self.layer = nn.Sequential(
+                nn.Linear(
+                    in_features=in_features,
+                    out_features=out_features
+                ),
+                nn.LeakyReLU(),
+                nn.Linear(
+                    in_features=out_features,
+                    out_features=out_features
+                ),
+                nn.LeakyReLU(),
+            )
+        
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return self.layer(x) + x
+
 
 class FeedForwardNeuralNetwork(nn.Module):
     def __init__(

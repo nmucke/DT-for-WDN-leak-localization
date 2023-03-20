@@ -9,13 +9,13 @@ dataloader_args:
   
 model_args:
   encoder:
-    state_dim: 585
+    state_dim: 589 #585
     latent_dim: 16
     hidden_neurons: [256]
     embed_dim: 4
   decoder:
     latent_dim: 16
-    state_dim: 585
+    state_dim: 589 #585
     hidden_neurons: [256]
     embed_dim: 4
     pars_dims: [317, 24]
@@ -30,7 +30,7 @@ optimizer_args:
 
 data_args:
   num_pipes: 317
-  num_nodes: 268
+  num_nodes: 272 #268
   num_time_steps: 24
   include_leak_area: False
 

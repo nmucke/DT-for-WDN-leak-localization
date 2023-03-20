@@ -1,6 +1,6 @@
 data_args:
   num_pipes: 317
-  num_nodes: 268
+  num_nodes: 272 #268
   num_time_steps: 24
 
 observation_args:
@@ -28,4 +28,4 @@ likelihood_args:
 prior: True
 
 solve_args:
-  num_samples: 30000
+  num_samples: 10000

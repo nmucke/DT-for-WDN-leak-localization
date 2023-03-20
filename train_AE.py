@@ -8,6 +8,9 @@ import os
 from DT_for_WDN_leak_localization.dataset import get_dataloader
 from DT_for_WDN_leak_localization.trainers.AE_trainer import train_AE
 
+from DT_for_WDN_leak_localization.models.dense_decoder import Decoder as DenseDecoder
+from DT_for_WDN_leak_localization.models.dense_encoder import Encoder as DenseEncoder
+
 from DT_for_WDN_leak_localization.models.decoder import Decoder
 from DT_for_WDN_leak_localization.models.encoder import Encoder
 from DT_for_WDN_leak_localization.models.wasserstein_AE import SupervisedWassersteinAE
@@ -17,10 +20,16 @@ from DT_for_WDN_leak_localization.trainers.WAE_train_stepper import SupervisedWA
 
 torch.set_default_dtype(torch.float32)
 
+
 WITH_MLFLOW = False
 
+DENSE = True
+
 NET = 4
-CONFIG_PATH = f"conf/net_{str(NET)}/Supervised_WAE.yml"
+if DENSE:
+    CONFIG_PATH = f"conf/net_{str(NET)}/dense_Supervised_WAE.yml"
+else:
+    CONFIG_PATH = f"conf/net_{str(NET)}/Supervised_WAE.yml"
 DATA_PATH = f"data/processed_data/net_{str(NET)}/train_data"
 
 NUM_SAMPLES = 30000
@@ -34,7 +43,10 @@ MODEL_SAVE_PATH = f"trained_models/net_{str(NET)}/"
 if not os.path.exists(MODEL_SAVE_PATH):
     os.makedirs(MODEL_SAVE_PATH)
 
-model_save_name = f"Supervised_WAE_net_{str(NET)}.pt"
+if DENSE:
+    model_save_name = f"dense_Supervised_WAE_net_{str(NET)}.pt"
+else:
+    model_save_name = f"Supervised_WAE_net_{str(NET)}.pt"
 MODEL_SAVE_PATH = os.path.join(MODEL_SAVE_PATH, model_save_name)
 
 if CUDA:
@@ -70,18 +82,30 @@ def main():
         **config['dataloader_args']
     )
 
-    encoder = Encoder(
-        **config['model_args']['encoder'],
-    )
-    decoder = Decoder(
-        **config['model_args']['decoder'],
-    )
+    if DENSE:
+        encoder = DenseEncoder(
+            **config['model_args']['encoder'],
+        )
+        decoder = DenseDecoder(
+            **config['model_args']['decoder'],
+        )
+    else:
+        encoder = Encoder(
+            **config['model_args']['encoder'],
+        )
+        decoder = Decoder(
+            **config['model_args']['decoder'],
+        )
 
     model = SupervisedWassersteinAE(
         encoder=encoder,
         decoder=decoder,        
     )
     model.to(device)
+
+
+    pytorch_total_params = sum(p.numel() for p in model.decoder.parameters())
+    print(f"Number of parameters: {pytorch_total_params}")
 
     optimizer = AEOptimizers(
         model=model,

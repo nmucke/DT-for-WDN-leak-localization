@@ -1,0 +1,39 @@
+train_stepper_args:
+  kernel_regu: 1.0e-2
+  kernel: 'multiscale'
+
+dataloader_args:
+  batch_size: 256
+  shuffle: True
+  num_workers: 4
+  
+model_args:
+  encoder:
+    state_dim: 216
+    latent_dim: 16
+    hidden_neurons: [192, 160, 128, 96, 64, 32]
+  decoder:
+    latent_dim: 16
+    state_dim: 216
+    hidden_neurons: [32, 64, 96, 128, 160, 192]
+    pars_dims: [119, 24]
+
+optimizer_args:
+  optimizer:
+    lr: 5.0e-4
+    weight_decay: 1.0e-10
+  scheduler:
+    warmup: 50 
+    max_iters: 1000
+
+data_args:
+  num_pipes: 119
+  num_nodes: 97
+  num_time_steps: 24
+  include_leak_area: False
+
+trainer_args:
+  num_epochs: 1000
+  patience: 50
+
+
