@@ -16,13 +16,18 @@ matplotlib.rcParams.update({'font.size': 16})
 
 torch.set_default_dtype(torch.float32)
 
-NET = 1
+NET = 2
 
 PRIOR = True
 
-NUM_SAMPLES = 100
+NUM_SAMPLES = 200
 
-RESULT_PATH = f"results/net_{str(NET)}"
+DENSE = False
+
+if DENSE:
+    RESULT_PATH = f"results/dense/net_{str(NET)}"
+else:
+    RESULT_PATH = f"results/net_{str(NET)}"
 
 NOISE_LIST = [0.005, 0.01, 0.025, 0.05, 0.1]
 if NET == 1:
@@ -76,6 +81,12 @@ def main():
             
             #entropy_list[j, i, :] = entropy
 
+            print(f"Num sensors: {num_sensors}, Noise: {noise}, Topological distance: {topological_distance_mean[j, i]:.2f}, Accuracy: {accuracy_list[j, i]:.2f} %")
+
+    print(f"Topological distance mean: {topological_distance_mean.mean()}")
+    print(f"Accuracy: {accuracy_list.mean()}")
+    
+
     plot_x_ticks = [f'{noise*100}%' for noise in NOISE_LIST]
     fig, ax = plt.subplots(1,1) 
     for j, num_sensors in enumerate(NUM_SENSORS_LIST):
@@ -95,16 +106,18 @@ def main():
             alpha=0.2
         )
         '''
+
     ax.set_xticks(NOISE_LIST)
     ax.set_xticklabels(plot_x_ticks)
     plt.xlabel("Noise")
     plt.ylabel("Average Topological Distance")
     plt.grid()
     plt.legend()
-    if PRIOR:
-        plt.savefig(f"figures/net_{str(NET)}/topological_distance_prior.pdf")
-    else:
-        plt.savefig(f"figures/net_{str(NET)}/topological_distance.pdf")
+    if not DENSE:
+        if PRIOR:
+            plt.savefig(f"figures/net_{str(NET)}/topological_distance_prior.pdf")
+        else:
+            plt.savefig(f"figures/net_{str(NET)}/topological_distance.pdf")
     plt.show()
 
     fig, ax = plt.subplots(1,1) 
@@ -123,10 +136,11 @@ def main():
     plt.ylabel("Accuracy [%]")
     plt.grid()
     plt.legend()
-    if PRIOR:
-        plt.savefig(f"figures/net_{str(NET)}/accuracy_prior.pdf")
-    else:
-        plt.savefig(f"figures/net_{str(NET)}/accuracy.pdf")
+    if not DENSE:
+        if PRIOR:
+            plt.savefig(f"figures/net_{str(NET)}/accuracy_prior.pdf")
+        else:
+            plt.savefig(f"figures/net_{str(NET)}/accuracy.pdf")
     plt.show()
 
     topological_distance_list = np.zeros((len(NUM_SENSORS_LIST), len(NOISE_LIST), NUM_SAMPLES))
@@ -195,10 +209,11 @@ def main():
     print(f"True entropy mean: {np.mean(true_entropy_list)}")
     print(f"False entropy mean: {np.mean(false_entropy_list)}")
     
-    if PRIOR:
-        plt.savefig(f"figures/net_{str(NET)}/entropy_hist_prior.pdf")
-    else:
-        plt.savefig(f"figures/net_{str(NET)}/entropy_hist.pdf")
+    if not DENSE:
+        if PRIOR:
+            plt.savefig(f"figures/net_{str(NET)}/entropy_hist_prior.pdf")
+        else:
+            plt.savefig(f"figures/net_{str(NET)}/entropy_hist.pdf")
 
     plt.show()
 
@@ -217,10 +232,11 @@ def main():
     plt.xlabel("Topological Distance")
     plt.ylabel("Entropy")
     plt.grid()
-    if PRIOR:
-        plt.savefig(f"figures/net_{str(NET)}/entropy_prior.pdf")
-    else:
-        plt.savefig(f"figures/net_{str(NET)}/entropy.pdf")
+    if not DENSE:
+        if PRIOR:
+            plt.savefig(f"figures/net_{str(NET)}/entropy_prior.pdf")
+        else:
+            plt.savefig(f"figures/net_{str(NET)}/entropy.pdf")
     plt.show()
 
     '''

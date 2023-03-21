@@ -25,7 +25,7 @@ WITH_MLFLOW = False
 
 DENSE = True
 
-NET = 4
+NET = 2
 if DENSE:
     CONFIG_PATH = f"conf/net_{str(NET)}/dense_Supervised_WAE.yml"
 else:

@@ -14,7 +14,7 @@ observation_args:
 noise_args:
   noise: [0.005, 0.01, 0.025, 0.05, 0.1]
 
-prior: False
+prior: True
 
 likelihood_args:
 

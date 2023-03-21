@@ -8,7 +8,6 @@ from DT_for_WDN_leak_localization.inference.likelihood import Likelihood
 from DT_for_WDN_leak_localization.inference.true_data import TrueData
 
 #@ray.remote(num_gpus=1)
-#@ray.remote
 def compute_posterior_k(
     forward_model: BaseForwardModel,
     likelihood: Likelihood,
@@ -103,41 +102,6 @@ def solve_inverse_problem(
         posterior_k = []
         for leak_location in potential_leak_locations:
             
-            '''
-            state_pred = forward_model(
-                num_samples=100, 
-                leak_location=torch.tensor([leak_location], device=device), 
-                time=torch.tensor([t_idx], device=device)
-            )
-            forward_model.pars_init = False
-
-            state_pred_true = forward_model(
-                num_samples=100, 
-                leak_location=torch.tensor([true_data.leak.item()], device=device), 
-                time=torch.tensor([t_idx], device=device)
-            )
-            state_pred_true_1 = forward_model(
-                num_samples=100, 
-                leak_location=torch.tensor([true_data.leak.item() + 20], device=device), 
-                time=torch.tensor([t_idx], device=device)
-            )
-            state_pred_true_2 = forward_model(
-                num_samples=100, 
-                leak_location=torch.tensor([true_data.leak.item() + 10], device=device), 
-                time=torch.tensor([t_idx], device=device)
-            )
-
-            plt.figure()
-            plt.plot(true_data.state[0, t_idx].detach().to('cpu').numpy(), label='true')
-            plt.plot(state_pred[0, :].detach().to('cpu').numpy(), label='pred')
-            plt.plot(state_pred_true[0, :].detach().to('cpu').numpy(), label='pred_true')
-            plt.plot(state_pred_true[20, :].detach().to('cpu').numpy(), label='pred_true_1')
-            plt.plot(state_pred_true[10, :].detach().to('cpu').numpy(), label='pred_true_2')
-            plt.legend()
-            plt.show()
-
-            pdb.set_trace()
-            '''
 
             if prior[leak_location] < uniform_prior/2:
                 posterior_k.append(torch.tensor(1e-12, device=device))
@@ -156,7 +120,6 @@ def solve_inverse_problem(
             ))
 
             #print(leak_location)
-
 
         #posterior_k = torch.stack(ray.get(posterior_k))
         posterior_k = torch.stack(posterior_k)

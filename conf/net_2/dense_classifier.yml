@@ -1,0 +1,28 @@
+
+dataloader_args:
+  batch_size: 64
+  shuffle: True
+  num_workers: 4
+  
+model_args:
+  state_dim: 65
+  hidden_neurons: [64, 128, 128, 128, 128]
+  pars_dim: 119
+
+optimizer_args:
+  lr: 5.0e-3
+  weight_decay: 1.0e-10
+
+
+data_args:
+  num_pipes: 119
+  num_nodes: 97
+  num_time_steps: 24
+  include_leak_area: False
+
+trainer_args:
+  num_epochs: 1000
+  patience: 50
+
+
+

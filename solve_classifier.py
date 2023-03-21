@@ -27,66 +27,43 @@ torch.set_default_dtype(torch.float32)
 torch.manual_seed(0)
 np.random.seed(0)
 
-NET = 2
-CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
-DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
-
-NUM_SAMPLES = 100
-
-NUM_WORKERS = 30
-
-DENSE = True
-
-PLOT = False
-
-CUDA = True
-if CUDA:
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
-
-
-# Set batch size to 1 if NET == 3. This is necessary if the memory is not enough
-if NET == 3:
-    BATCH_SIZE = 500
-elif NET == 2:
-    BATCH_SIZE = 30000
-elif NET == 4:
-    BATCH_SIZE = 30000
-else:
-    BATCH_SIZE = None
-
-MODEL_LOAD_PATH = f"trained_models/net_{str(NET)}/"
-
-if DENSE:
-    MODEL_LOAD_NAME = f"dense_Supervised_WAE_net_{str(NET)}.pt"
-else:
-    MODEL_LOAD_NAME = f"Supervised_WAE_net_{str(NET)}.pt"
-MODEL_LOAD_PATH = os.path.join(MODEL_LOAD_PATH, MODEL_LOAD_NAME)
-
-PREPROCESSOR_LOAD_PATH = f"trained_preprocessors/net_{str(NET)}_preprocessor.pkl"
-
-with open(CONFIG_PATH) as f:
-    config = yaml.load(f, Loader=SafeLoader)
-
-PRIOR = config['prior']
-if PRIOR:
-    prior = get_prior(net=NET, data_path=DATA_PATH)
-    prior = torch.tensor(prior, dtype=torch.float32)
-
-    DATA_PATH += "_prior"
-else:
-    prior = None
-
-if DENSE:
-    save_string = f"results/dense/net_{str(NET)}"
-else:
-    save_string = f"results/net_{str(NET)}"
 
 def main():
 
-    model = torch.load(MODEL_LOAD_PATH).to("cpu")
-    model.eval()
+    DENSE = True
+
+    NET = 1
+    CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
+    DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
+
+    NUM_SAMPLES = 100
+
+    DENSE = True
+
+    PLOT = False
+
+    PREPROCESSOR_LOAD_PATH = f"trained_preprocessors/net_{str(NET)}_preprocessor.pkl"
+
+    with open(CONFIG_PATH) as f:
+        config = yaml.load(f, Loader=SafeLoader)
+
+
+    if DENSE:
+        save_string = f"results/classifier_dense/net_{str(NET)}"
+    else:
+        save_string = f"results/classifier/net_{str(NET)}"
+
+    PRIOR = config['prior']
+    if PRIOR:
+        prior = get_prior(net=NET, data_path=DATA_PATH)
+        prior = torch.tensor(prior, dtype=torch.float32)
+
+        DATA_PATH += "_prior"
+    else:
+        prior = None
+
+    MODEL_LOAD_PATH = f"trained_models/net_{str(NET)}/"
+
     preprocessor = pickle.load(open(PREPROCESSOR_LOAD_PATH, "rb"))
 
     #pytorch_total_params = sum(p.numel() for p in model.decoder.parameters())
@@ -98,6 +75,15 @@ def main():
     )
     
     for obs_case_key in config['observation_args'].keys():
+
+
+        if DENSE:
+            MODEL_LOAD_NAME = f"dense_classifier_net_{str(NET)}_{obs_case_key}.pt"
+        else:
+            MODEL_LOAD_NAME = f"transformer_classifier_net_{str(NET)}_{obs_case_key}.pt"
+            
+        MODEL_LOAD_PATH_k = os.path.join(MODEL_LOAD_PATH, MODEL_LOAD_NAME)
+
         for noise in config['noise_args']['noise']:
             
             observation_model = ObservationModel(
@@ -108,10 +94,7 @@ def main():
                 noise=noise,
             )
 
-            forward_model = ForwardModel(
-                generator=model.decoder,
-                device=device,
-            )
+            model = torch.load(MODEL_LOAD_PATH_k).to("cpu")
 
             topological_distance_list = []
             correct_leak_location_list = []
@@ -120,8 +103,12 @@ def main():
             pbar = tqdm(
                 range(0, NUM_SAMPLES),
                 bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'
-                )
+            )
             for i in pbar:
+                if prior is None:
+                    prior_k = torch.ones(len(true_data.wdn.edges.ids)) / len(true_data.wdn.edges.ids)
+                else:
+                    prior_k = prior
                 
                 # Load true data
                 wdn = WDN(
@@ -136,29 +123,25 @@ def main():
                     observation_noise=observation_noise,
                 )
                 
-                # Set up likelihood
-                likelihood = Likelihood(
-                    observation_model=observation_model,
-                    observation_noise=observation_noise,
-                    #**config['likelihood_args'],
-                )
+                    
+                for t in range(6, 17):
 
-                # Solve inverse problem
-                posterior = solve_inverse_problem(
-                    true_data=true_data,
-                    forward_model=forward_model,
-                    likelihood=likelihood,
-                    time=range(6, 17),
-                    prior=prior,
-                    batch_size=BATCH_SIZE,
-                    device=device,
-                    **config['solve_args'],
-                )
+                    true_obs = true_data.obs[0, t:t+1].type(torch.float32)
 
+                    # Solve inverse problem
+                    posterior_k = model(true_obs)
+
+                    kl_divergence = torch.sum(prior_k * torch.log(prior_k / posterior_k))
+
+                    if kl_divergence < 0.1:
+                        break         
+
+                    prior_k = posterior_k
+                    
                 # Compute metrics
                 metrics = InverseProblemMetrics(
                     true_data=true_data,
-                    posterior=posterior
+                    posterior=posterior_k
                 )
 
                 topological_distance_list.append(metrics.topological_distance)
