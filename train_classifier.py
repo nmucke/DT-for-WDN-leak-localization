@@ -14,9 +14,9 @@ from DT_for_WDN_leak_localization.models.dense_classifier import DenseClassifier
 torch.set_default_dtype(torch.float32)
 
 DENSE = True
-OBS_CASE_KEY = "obs_case_1"
+OBS_CASE_KEY = "obs_case_2"
 
-NET = 2
+NET = 4
 if DENSE:
     CONFIG_PATH = f"conf/net_{str(NET)}/dense_classifier.yml"
 else:

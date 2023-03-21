@@ -27,7 +27,6 @@ torch.set_default_dtype(torch.float32)
 torch.manual_seed(0)
 np.random.seed(0)
 
-
 def main():
 
     DENSE = True
@@ -36,7 +35,7 @@ def main():
     CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
     DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
-    NUM_SAMPLES = 100
+    NUM_SAMPLES = 200
 
     DENSE = True
 
@@ -105,11 +104,6 @@ def main():
                 bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}'
             )
             for i in pbar:
-                if prior is None:
-                    prior_k = torch.ones(len(true_data.wdn.edges.ids)) / len(true_data.wdn.edges.ids)
-                else:
-                    prior_k = prior
-                
                 # Load true data
                 wdn = WDN(
                     data_path=f"{DATA_PATH}/network_{str(i)}",
@@ -122,6 +116,12 @@ def main():
                     observation_model=observation_model,
                     observation_noise=observation_noise,
                 )
+
+                if prior is None:
+                    prior_k = torch.ones(len(true_data.wdn.edges.ids)) / len(true_data.wdn.edges.ids)
+                else:
+                    prior_k = prior
+                
                 
                     
                 for t in range(6, 17):

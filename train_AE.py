@@ -23,9 +23,9 @@ torch.set_default_dtype(torch.float32)
 
 WITH_MLFLOW = False
 
-DENSE = True
+DENSE = False
 
-NET = 2
+NET = 4
 if DENSE:
     CONFIG_PATH = f"conf/net_{str(NET)}/dense_Supervised_WAE.yml"
 else:
