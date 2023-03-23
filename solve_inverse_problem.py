@@ -27,7 +27,7 @@ torch.set_default_dtype(torch.float32)
 torch.manual_seed(0)
 np.random.seed(0)
 
-NET = 2
+NET = 4
 CONFIG_PATH = f"conf/net_{str(NET)}/inverse_problem.yml"
 DATA_PATH = f"data/raw_data/net_{str(NET)}/test_data"
 
@@ -35,7 +35,7 @@ NUM_SAMPLES = 100
 
 NUM_WORKERS = 30
 
-DENSE = True
+DENSE = False
 
 PLOT = False
 
@@ -52,7 +52,7 @@ if NET == 3:
 elif NET == 2:
     BATCH_SIZE = 30000
 elif NET == 4:
-    BATCH_SIZE = 30000
+    BATCH_SIZE = 2000
 else:
     BATCH_SIZE = None
 
