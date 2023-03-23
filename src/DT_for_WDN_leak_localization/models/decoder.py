@@ -149,7 +149,8 @@ class Decoder(nn.Module):
 
         self.final_layer = nn.Linear(
             in_features=state_dim*embed_dim,#(embed_dim//2),
-            out_features=state_dim
+            out_features=state_dim,
+            #bias=False
         )
 
     def pars_forward(self, pars: torch.Tensor) -> torch.Tensor:

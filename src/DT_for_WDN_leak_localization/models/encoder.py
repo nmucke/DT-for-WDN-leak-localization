@@ -131,7 +131,8 @@ class Encoder(nn.Module):
 
         self.final_layer = nn.Linear(
             in_features=latent_dim*embed_dim,#(embed_dim//2),
-            out_features=latent_dim
+            out_features=latent_dim,
+            #bias=False
         )
     
     def forward(
