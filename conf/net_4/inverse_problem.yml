@@ -25,7 +25,7 @@ noise_args:
 
 likelihood_args:
 
-prior: False
+prior: True
 
 solve_args:
   num_samples: 30000

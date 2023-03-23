@@ -35,7 +35,7 @@ NUM_SAMPLES = 100
 
 NUM_WORKERS = 30
 
-DENSE = False
+DENSE = True
 
 PLOT = False
 
@@ -88,8 +88,6 @@ def main():
     model = torch.load(MODEL_LOAD_PATH).to("cpu")
     model.eval()
     preprocessor = pickle.load(open(PREPROCESSOR_LOAD_PATH, "rb"))
-
-    pdb.set_trace()
 
     #pytorch_total_params = sum(p.numel() for p in model.decoder.parameters())
     #print(f"Number of parameters: {pytorch_total_params}")
