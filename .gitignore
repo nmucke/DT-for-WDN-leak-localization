@@ -4,7 +4,7 @@
 data/
 
 # Ignore results
-results/
+#results/
 
 # Ignore mlflow
 mlruns/
